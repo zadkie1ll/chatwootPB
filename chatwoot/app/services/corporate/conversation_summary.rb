@@ -6,7 +6,7 @@ class Corporate::ConversationSummary
   MESSAGE_LIMIT = 200
   CHARACTER_LIMIT = 32_000
   OUTPUT_LIMIT = 1000
-  ENDPOINT = 'https://api.openai.com/v1/responses'.freeze
+  ENDPOINT = 'http://openai-proxy:8080/v1/responses'.freeze
   INSTRUCTIONS = <<~TEXT.freeze
     Составь краткую фактическую сводку переписки на русском языке для сотрудника компании.
     Укажи запрос клиента, согласованные условия, нерешённые вопросы и следующий шаг.
@@ -52,7 +52,7 @@ class Corporate::ConversationSummary
     request = Net::HTTP::Post.new(uri, 'Authorization' => "Bearer #{key}", 'Content-Type' => 'application/json')
     request.body = { model: model, instructions: INSTRUCTIONS, input: text, store: false,
                      reasoning: { effort: 'none' }, max_output_tokens: OUTPUT_LIMIT }.to_json
-    response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true, open_timeout: 5, read_timeout: 35, write_timeout: 10) do |http|
+    response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == 'https', open_timeout: 5, read_timeout: 35, write_timeout: 10) do |http|
       http.request(request)
     end
     parse_response(response)

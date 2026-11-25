@@ -1,0 +1,10 @@
+# Backend-only patch. The base must be an already verified corporate CE image
+# whose compiled frontend matches the current JavaScript source.
+ARG CORPORATE_BASE_IMAGE
+FROM ${CORPORATE_BASE_IMAGE}
+COPY chatwoot/app /app/app
+COPY chatwoot/lib /app/lib
+COPY chatwoot/config /app/config
+COPY chatwoot/db /app/db
+RUN test ! -d /app/enterprise \
+    && ruby -I/app/lib -rchatwoot_app -e 'abort "Enterprise enabled" if ChatwootApp.enterprise?'
