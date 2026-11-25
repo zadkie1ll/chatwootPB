@@ -1,0 +1,12 @@
+app/controllers/api/v1/accounts/corporate/crm_controller.rb
+app/jobs/corporate/crm_inbound_lookup_job.rb
+app/jobs/corporate/crm_lookup_job.rb
+app/jobs/corporate/crm_sync_job.rb
+app/models/corporate_crm_employee.rb
+app/models/corporate_crm_link.rb
+app/services/corporate/crm_client.rb
+app/services/corporate/crm_link_service.rb
+app/services/corporate/ownership_service.rb
+app/services/corporate/shared_intake_backfill.rb
+db/migrate/20261124150446_create_corporate_crm.rb
+spec/corporate/crm_spec.rb

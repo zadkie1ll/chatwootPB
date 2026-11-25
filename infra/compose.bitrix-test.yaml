@@ -1,0 +1,44 @@
+# Local synthetic CRM only. No real portal tokens or customer data.
+services:
+  bitrix-mock:
+    image: ${PYTHON_IMAGE}
+    command: ['python', '/tests/mock_server.py']
+    volumes:
+      - ./tests/bitrix/mock_server.py:/tests/mock_server.py:ro
+      - ./secrets/bitrix-mock:/certs:ro
+    networks:
+      lab:
+        aliases: [synthetic.bitrix24.test]
+    restart: 'no'
+
+  chatwoot-web:
+    environment: &crm-app-test
+      BITRIX_ENABLED: 'true'
+      CORPORATE_SHARED_INTAKE_ENABLED: 'true'
+  chatwoot-worker:
+    environment: *crm-app-test
+  chatwoot-prepare:
+    environment: *crm-app-test
+  integration-prepare:
+    environment: &crm-integration-test
+      BITRIX_ENABLED: 'true'
+      BITRIX_WEBHOOK_URL: https://synthetic.bitrix24.test:8443/rest/1/synthetic
+      BITRIX_DIRECTORY_WEBHOOK_URL: https://synthetic.bitrix24.test:8443/rest/1/synthetic
+      BITRIX_PORTAL_URL: https://synthetic.bitrix24.test:8443
+      BITRIX_MESSENGER_FIELD: UF_CRM_CW_MESSENGER
+      BITRIX_LEAD_MESSENGER_FIELD: UF_CRM_CW_MESSENGER
+      SSL_CERT_FILE: /certs/cert.pem
+    volumes:
+      - ./secrets/bitrix-mock:/certs:ro
+  integration-web:
+    environment: *crm-integration-test
+    volumes:
+      - ./secrets/bitrix-mock:/certs:ro
+  integration-worker:
+    environment: *crm-integration-test
+    volumes:
+      - ./secrets/bitrix-mock:/certs:ro
+  integration-crm-worker:
+    environment: *crm-integration-test
+    volumes:
+      - ./secrets/bitrix-mock:/certs:ro

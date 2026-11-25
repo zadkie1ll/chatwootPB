@@ -1,0 +1,333 @@
+name: ${COMPOSE_PROJECT_NAME:-corporate-chatwoot-lab}
+
+x-app-environment: &app-environment
+  RAILS_ENV: production
+  NODE_ENV: production
+  INSTALLATION_ENV: docker
+  DISABLE_ENTERPRISE: 'true'
+  CORPORATE_ACCESS_ENABLED: 'true'
+  BITRIX_ENABLED: ${BITRIX_ENABLED:-false}
+  CORPORATE_SHARED_INTAKE_ENABLED: ${CORPORATE_SHARED_INTAKE_ENABLED:-false}
+  CW_EDITION: ce
+  FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+  FORCE_SSL: 'false'
+  ENABLE_ACCOUNT_SIGNUP: 'false'
+  SECRET_KEY_BASE: ${SECRET_KEY_BASE:?Run scripts/init-lab-env.py}
+  ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: ${ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY:?Required}
+  ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: ${ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY:?Required}
+  ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ${ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT:?Required}
+  CORPORATE_ACCOUNT_ID: ${CORPORATE_ACCOUNT_ID:-}
+  CORPORATE_INBOX_ID: ${CORPORATE_INBOX_ID:-}
+  CW_SERVICE_TOKEN: ${CW_SERVICE_TOKEN:-}
+  INTEGRATION_URL: http://integration-web:8090
+  INTEGRATION_API_TOKEN: ${INTEGRATION_API_TOKEN:-}
+  TELEGRAM_MODE: ${TELEGRAM_MODE:-personal}
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: '5432'
+  POSTGRES_DATABASE: chatwoot_lab
+  POSTGRES_USERNAME: chatwoot
+  POSTGRES_PASSWORD: ${CW_DATABASE_PASSWORD:?Required}
+  REDIS_URL: redis://redis:6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?Required}
+  ACTIVE_STORAGE_SERVICE: local
+  RAILS_LOG_TO_STDOUT: 'true'
+  LOG_LEVEL: warn
+  RAILS_MAX_THREADS: '5'
+  SIDEKIQ_CONCURRENCY: '5'
+  MAILER_SENDER_EMAIL: lab@example.invalid
+  SMTP_ADDRESS: smtp-disabled.invalid
+  SMTP_OPEN_TIMEOUT: '1'
+  SMTP_READ_TIMEOUT: '1'
+
+x-runtime: &runtime
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "3"}
+  pids_limit: 256
+  stop_grace_period: 120s
+
+x-app: &app
+  <<: *runtime
+  mem_limit: 1280m
+  image: ${CW_IMAGE_NAME:-corporate-chatwoot-ce:telegram-dev}
+  build:
+    context: .
+    dockerfile: infra/chatwoot-corporate/Dockerfile
+    target: production
+    args:
+      CHATWOOT_CE_IMAGE: ${CHATWOOT_CE_IMAGE:?Missing infra/images.lock.env}
+      NODE_IMAGE: ${NODE_IMAGE:?Missing Node image lock}
+  environment: *app-environment
+  networks: [lab]
+  volumes:
+    - chatwoot_storage:/app/storage
+    - ./tests/baseline:/lab:ro
+  tmpfs:
+    - /app/tmp
+  restart: unless-stopped
+
+services:
+  clamav:
+    <<: *runtime
+    mem_limit: 2048m
+    image: ${CLAMAV_IMAGE:?Missing antivirus image lock}
+    platform: linux/amd64
+    profiles: [antivirus]
+    volumes:
+      - clamav_data:/var/lib/clamav
+    networks: [lab, antivirus-egress]
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'clamdcheck.sh']
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 180s
+
+  postgres:
+    <<: *runtime
+    mem_limit: 1024m
+    image: ${POSTGRES_IMAGE:?Missing infra/images.lock.env}
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Required}
+      CW_DATABASE_PASSWORD: ${CW_DATABASE_PASSWORD:?Required}
+      INTEGRATION_DB_PASSWORD: ${INTEGRATION_DB_PASSWORD:?Required}
+    command: ['postgres', '-c', 'shared_preload_libraries=pg_stat_statements']
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/01-chatwoot.sh:/docker-entrypoint-initdb.d/01-chatwoot.sh:ro
+      - ./infra/postgres/02-integration.sh:/docker-entrypoint-initdb.d/02-integration.sh:ro
+    networks: [lab]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d chatwoot_lab']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  redis:
+    <<: *runtime
+    mem_limit: 512m
+    image: ${REDIS_IMAGE:?Missing infra/images.lock.env}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Required}
+    command: ['sh', '-c', 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"']
+    volumes:
+      - redis_data:/data
+    networks: [lab]
+    healthcheck:
+      test: ['CMD-SHELL', 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  chatwoot-prepare:
+    <<: *app
+    command: ['bundle', 'exec', 'rails', 'db:chatwoot_prepare']
+    restart: 'no'
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
+  chatwoot-web:
+    <<: *app
+    command: ['bundle', 'exec', 'rails', 'server', '-b', '0.0.0.0', '-p', '3000']
+    depends_on:
+      chatwoot-prepare: {condition: service_completed_successfully}
+    healthcheck:
+      test: ['CMD', 'ruby', '-rnet/http', '-e', 'exit(Net::HTTP.get_response(URI("http://127.0.0.1:3000/health")).code == "200" ? 0 : 1)']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  chatwoot-worker:
+    <<: *app
+    command: ['bundle', 'exec', 'sidekiq', '-C', 'config/sidekiq.yml']
+    depends_on:
+      chatwoot-prepare: {condition: service_completed_successfully}
+    healthcheck:
+      test: ['CMD', 'bundle', 'exec', 'ruby', '-rsidekiq/api', '-rsocket', '-e', 'Sidekiq.configure_client { |c| c.redis = {url: ENV.fetch("REDIS_URL"), password: ENV.fetch("REDIS_PASSWORD")} }; exit(Sidekiq::ProcessSet.new.any? { |p| p["hostname"] == Socket.gethostname && Time.now.to_f - p["beat"].to_f < 120 } ? 0 : 1)']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  proxy:
+    <<: *runtime
+    mem_limit: 128m
+    image: ${NGINX_IMAGE:?Missing infra/images.lock.env}
+    ports: ['127.0.0.1:${HTTP_PORT:-8080}:8080']
+    volumes:
+      - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    read_only: true
+    tmpfs: [/var/cache/nginx, /var/run, /tmp]
+    networks: [lab, ingress]
+    depends_on:
+      chatwoot-web: {condition: service_healthy}
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8080/proxy-health']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  lab-seed:
+    <<: *app
+    profiles: [tools]
+    command: ['bundle', 'exec', 'rails', 'runner', '/lab/seed.rb']
+    environment:
+      <<: *app-environment
+      LAB_SEED_CONFIRM: synthetic-only
+      LAB_USER_PASSWORD: ${LAB_USER_PASSWORD:?Required}
+    volumes:
+      - chatwoot_storage:/app/storage
+      - ./tests/baseline/seed.rb:/lab/seed.rb:ro
+      - ./secrets:/lab-secrets
+    depends_on:
+      chatwoot-prepare: {condition: service_completed_successfully}
+    restart: 'no'
+
+  corporate-bootstrap:
+    <<: *app
+    profiles: [tools]
+    command: ['bundle', 'exec', 'rails', 'runner', '/bootstrap/bootstrap.rb']
+    environment:
+      <<: *app-environment
+      COMPANY_NAME: ${COMPANY_NAME:-Corporate Telegram}
+      CW_WEBHOOK_SECRET: ${CW_WEBHOOK_SECRET:-}
+      INITIAL_SUPERVISOR_EMAIL: ${INITIAL_SUPERVISOR_EMAIL:-}
+      INITIAL_SUPERVISOR_PASSWORD: ${INITIAL_SUPERVISOR_PASSWORD:-}
+      INITIAL_TECH_ADMIN_EMAIL: ${INITIAL_TECH_ADMIN_EMAIL:-}
+      INITIAL_TECH_ADMIN_PASSWORD: ${INITIAL_TECH_ADMIN_PASSWORD:-}
+    volumes:
+      - ./scripts/server/bootstrap.rb:/bootstrap/bootstrap.rb:ro
+    restart: 'no'
+
+  telegram-gateway:
+    <<: *runtime
+    mem_limit: 768m
+    image: ${GATEWAY_IMAGE:-corporate-telegram-gateway:dev}
+    build:
+      context: ./gateways/telegram
+      args: {PYTHON_IMAGE: "${PYTHON_IMAGE}"}
+    environment:
+      GATEWAY_TOKEN: ${GATEWAY_TOKEN}
+      TELEGRAM_MODE: ${TELEGRAM_MODE:-personal}
+      TELEGRAM_DATA_DIR: /data
+    volumes:
+      - ./secrets/telegram:/data
+    networks: [lab, telegram-egress]
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'python', '-c', 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8091/health",timeout=3)']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  integration-prepare:
+    <<: *runtime
+    mem_limit: 384m
+    image: ${INTEGRATION_IMAGE:-corporate-chatwoot-integration:dev}
+    build:
+      context: ./integration
+      args: {PYTHON_IMAGE: "${PYTHON_IMAGE}"}
+    environment: &integration-environment
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      INTEGRATION_DB_HOST: postgres
+      INTEGRATION_DB_NAME: integration_lab
+      INTEGRATION_DB_USER: integration
+      INTEGRATION_DB_PASSWORD: ${INTEGRATION_DB_PASSWORD}
+      INTEGRATION_API_TOKEN: ${INTEGRATION_API_TOKEN}
+      CW_SERVICE_TOKEN: ${CW_SERVICE_TOKEN}
+      CW_WEBHOOK_SECRET: ${CW_WEBHOOK_SECRET:-}
+      GATEWAY_TOKEN: ${GATEWAY_TOKEN}
+      CHATWOOT_INTERNAL_URL: http://chatwoot-web:3000
+      TELEGRAM_GATEWAY_URL: http://telegram-gateway:8091
+      TELEGRAM_MODE: ${TELEGRAM_MODE:-personal}
+      CLAMAV_HOST: clamav
+      BITRIX_ENABLED: ${BITRIX_ENABLED:-false}
+      BITRIX_WEBHOOK_URL: ${BITRIX_WEBHOOK_URL:-}
+      BITRIX_DIRECTORY_WEBHOOK_URL: ${BITRIX_DIRECTORY_WEBHOOK_URL:-}
+      BITRIX_PORTAL_URL: ${BITRIX_PORTAL_URL:-}
+      CHATWOOT_PUBLIC_URL: ${FRONTEND_URL:-http://localhost:8080}
+      BITRIX_MANAGER_CHAT_FIELD: ${BITRIX_MANAGER_CHAT_FIELD:-UF_CRM_CW_MANAGER_CHAT}
+      BITRIX_SUPERVISOR_CHAT_FIELD: ${BITRIX_SUPERVISOR_CHAT_FIELD:-UF_CRM_CW_SUPERVISOR_CHAT}
+      BITRIX_MESSENGER_FIELD: ${BITRIX_MESSENGER_FIELD:-}
+      BITRIX_LEAD_MANAGER_CHAT_FIELD: ${BITRIX_LEAD_MANAGER_CHAT_FIELD:-UF_CRM_CW_MANAGER_CHAT}
+      BITRIX_LEAD_SUPERVISOR_CHAT_FIELD: ${BITRIX_LEAD_SUPERVISOR_CHAT_FIELD:-UF_CRM_CW_SUPERVISOR_CHAT}
+      BITRIX_LEAD_MESSENGER_FIELD: ${BITRIX_LEAD_MESSENGER_FIELD:-}
+    networks: [lab]
+    command: ['python', 'manage.py', 'migrate', '--noinput']
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: 'no'
+
+  integration-web:
+    <<: *runtime
+    mem_limit: 512m
+    image: ${INTEGRATION_IMAGE:-corporate-chatwoot-integration:dev}
+    environment: *integration-environment
+    networks: [lab, crm-egress]
+    depends_on:
+      integration-prepare: {condition: service_completed_successfully}
+      telegram-gateway: {condition: service_healthy}
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'python', '-c', 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8090/health/",timeout=3)']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  integration-worker:
+    <<: *runtime
+    mem_limit: 512m
+    image: ${INTEGRATION_IMAGE:-corporate-chatwoot-integration:dev}
+    environment: *integration-environment
+    networks: [lab, crm-egress]
+    command: ['python', 'manage.py', 'delivery_worker']
+    healthcheck:
+      test: ['CMD', 'python', '-c', 'import os,time; assert time.time()-os.stat("/tmp/delivery-heartbeat").st_mtime<120']
+      interval: 30s
+      timeout: 5s
+      retries: 4
+      start_period: 120s
+    depends_on:
+      integration-web: {condition: service_healthy}
+      chatwoot-web: {condition: service_healthy}
+    restart: unless-stopped
+
+  integration-crm-worker:
+    <<: *runtime
+    mem_limit: 256m
+    image: ${INTEGRATION_IMAGE:-corporate-chatwoot-integration:dev}
+    environment: *integration-environment
+    networks: [lab, crm-egress]
+    command: ['python', 'manage.py', 'crm_reconcile_worker']
+    healthcheck:
+      test: ['CMD', 'python', '-c', 'import os,time; assert time.time()-os.stat("/tmp/crm-heartbeat").st_mtime<120']
+      interval: 30s
+      timeout: 5s
+      retries: 4
+      start_period: 120s
+    depends_on:
+      integration-web: {condition: service_healthy}
+      chatwoot-web: {condition: service_healthy}
+    restart: unless-stopped
+
+networks:
+  lab:
+    internal: true
+  ingress: {}
+  telegram-egress: {}
+  antivirus-egress: {}
+  crm-egress: {}
+
+volumes:
+  clamav_data:
+  postgres_data:
+  redis_data:
+  chatwoot_storage:

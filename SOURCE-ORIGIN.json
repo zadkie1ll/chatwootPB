@@ -1,0 +1,9 @@
+{
+  "upstream_repository": "https://github.com/chatwoot/chatwoot",
+  "upstream_commit": "b2f94636d325a126a67c6c4c808303d8aa8cbeea",
+  "edition": "Community Edition",
+  "enterprise_included": false,
+  "runtime_secrets_included": false,
+  "operational_evidence_included": false,
+  "kind": "source snapshot with corporate modifications; not upstream Git history"
+}

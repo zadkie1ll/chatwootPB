@@ -1,0 +1,23 @@
+en:
+  corporate:
+    channel_unavailable: "The channel is temporarily unavailable."
+    recipient_unavailable: "Unable to start a conversation with this number."
+    dispatch_in_progress: "An in-flight or unknown delivery must be reconciled before transfer."
+    unknown_contact: "Unknown Telegram contact"
+    invalid_staff: "Check the employee email and password."
+    crm_unavailable: "Check the Bitrix24 configuration and employee mapping."
+    crm_not_configured: "Check the Bitrix24 configuration and employee mapping."
+    crm_employee_not_mapped: "Ask your supervisor to link this manager to Bitrix24."
+    crm_assignee_required: "Check the Bitrix24 configuration and employee mapping."
+    crm_deal_already_linked: "Check the Bitrix24 configuration and employee mapping."
+    crm_mapping_in_use: "Check the Bitrix24 configuration and employee mapping."
+    crm_access_denied: "Check the Bitrix24 configuration and employee mapping."
+    crm_rate_limited: "Check the Bitrix24 configuration and employee mapping."
+    crm_deal_not_found: "No open deal found. Enter a deal link."
+    crm_mapping_conflict: "Check the Bitrix24 configuration and employee mapping."
+    crm_binding_conflict: "Check the Bitrix24 configuration and employee mapping."
+    invalid_phone: "Enter a valid international phone number."
+    invalid_deal_url: "Enter a deal link from your Bitrix24 portal."
+    provide_phone_or_deal: "Check the Bitrix24 configuration and employee mapping."
+  media_pending: Downloading attachment
+  media_failed: Attachment is unavailable or did not pass verification

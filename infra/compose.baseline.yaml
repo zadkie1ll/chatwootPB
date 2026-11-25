@@ -1,0 +1,156 @@
+name: corporate-chatwoot-lab
+
+x-app-environment: &app-environment
+  RAILS_ENV: production
+  NODE_ENV: production
+  INSTALLATION_ENV: docker
+  DISABLE_ENTERPRISE: 'true'
+  CW_EDITION: ce
+  FRONTEND_URL: http://localhost:8080
+  FORCE_SSL: 'false'
+  ENABLE_ACCOUNT_SIGNUP: 'false'
+  SECRET_KEY_BASE: ${SECRET_KEY_BASE:?Run scripts/init-lab-env.py}
+  ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: ${ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY:?Required}
+  ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: ${ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY:?Required}
+  ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ${ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT:?Required}
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: '5432'
+  POSTGRES_DATABASE: chatwoot_lab
+  POSTGRES_USERNAME: chatwoot
+  POSTGRES_PASSWORD: ${CW_DATABASE_PASSWORD:?Required}
+  REDIS_URL: redis://redis:6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?Required}
+  ACTIVE_STORAGE_SERVICE: local
+  RAILS_LOG_TO_STDOUT: 'true'
+  LOG_LEVEL: warn
+  RAILS_MAX_THREADS: '5'
+  SIDEKIQ_CONCURRENCY: '5'
+  MAILER_SENDER_EMAIL: lab@example.invalid
+  SMTP_ADDRESS: smtp-disabled.invalid
+  SMTP_OPEN_TIMEOUT: '1'
+  SMTP_READ_TIMEOUT: '1'
+
+x-app: &app
+  image: corporate-chatwoot-ce:stage1-b2f9463
+  build:
+    context: ./infra/chatwoot
+    args:
+      CHATWOOT_CE_IMAGE: ${CHATWOOT_CE_IMAGE:?Missing infra/images.lock.env}
+  environment: *app-environment
+  networks: [lab]
+  volumes:
+    - chatwoot_storage:/app/storage
+    - ./tests/baseline:/lab:ro
+  tmpfs:
+    - /app/tmp
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:?Missing infra/images.lock.env}
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Required}
+      CW_DATABASE_PASSWORD: ${CW_DATABASE_PASSWORD:?Required}
+    command: ['postgres', '-c', 'shared_preload_libraries=pg_stat_statements']
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/01-chatwoot.sh:/docker-entrypoint-initdb.d/01-chatwoot.sh:ro
+    networks: [lab]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d chatwoot_lab']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  redis:
+    image: ${REDIS_IMAGE:?Missing infra/images.lock.env}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Required}
+    command: ['sh', '-c', 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"']
+    volumes:
+      - redis_data:/data
+    networks: [lab]
+    healthcheck:
+      test: ['CMD-SHELL', 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  chatwoot-prepare:
+    <<: *app
+    command: ['bundle', 'exec', 'rails', 'db:chatwoot_prepare']
+    restart: 'no'
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
+  chatwoot-web:
+    <<: *app
+    command: ['bundle', 'exec', 'rails', 'server', '-b', '0.0.0.0', '-p', '3000']
+    depends_on:
+      chatwoot-prepare: {condition: service_completed_successfully}
+    healthcheck:
+      test: ['CMD', 'ruby', '-rnet/http', '-e', 'exit(Net::HTTP.get_response(URI("http://127.0.0.1:3000/health")).code == "200" ? 0 : 1)']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  chatwoot-worker:
+    <<: *app
+    command: ['bundle', 'exec', 'sidekiq', '-C', 'config/sidekiq.yml']
+    depends_on:
+      chatwoot-prepare: {condition: service_completed_successfully}
+    healthcheck:
+      test: ['CMD', 'ruby', '-e', 'exit(File.read("/proc/1/cmdline").include?("sidekiq") ? 0 : 1)']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  proxy:
+    image: ${NGINX_IMAGE:?Missing infra/images.lock.env}
+    ports: ['127.0.0.1:8080:8080']
+    volumes:
+      - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    read_only: true
+    tmpfs: [/var/cache/nginx, /var/run, /tmp]
+    networks: [lab, ingress]
+    depends_on:
+      chatwoot-web: {condition: service_healthy}
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8080/proxy-health']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  lab-seed:
+    <<: *app
+    profiles: [tools]
+    command: ['bundle', 'exec', 'rails', 'runner', '/lab/seed.rb']
+    environment:
+      <<: *app-environment
+      LAB_SEED_CONFIRM: synthetic-only
+      LAB_USER_PASSWORD: ${LAB_USER_PASSWORD:?Required}
+    volumes:
+      - chatwoot_storage:/app/storage
+      - ./tests/baseline/seed.rb:/lab/seed.rb:ro
+      - ./secrets:/lab-secrets
+    depends_on:
+      chatwoot-prepare: {condition: service_completed_successfully}
+    restart: 'no'
+
+networks:
+  lab:
+    internal: true
+  ingress: {}
+
+volumes:
+  postgres_data:
+  redis_data:
+  chatwoot_storage:

@@ -1,0 +1,32 @@
+# Runtime secrets and data
+.env
+.env.*
+!.env.example
+*.session
+*.session-journal
+*.session-wal
+*.session-shm
+secrets/
+backups/
+volumes/
+storage/
+*.pem
+*.key
+*.p12
+.DS_Store
+__pycache__/
+.venv/
+node_modules/
+
+.state/
+.pytest_cache/
+*.sqlite3
+playwright-report/
+test-results/
+
+# Export contains ordinary CE files, without the upstream nested Git checkout.
+/chatwoot/.git/
+/chatwoot/enterprise/
+/chatwoot/spec/enterprise/
+/docs/evidence/*
+!/docs/evidence/README.md

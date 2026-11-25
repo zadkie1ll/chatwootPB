@@ -1,0 +1,8 @@
+app/javascript/dashboard/components/corporate/CorporateToolbar.vue
+app/javascript/dashboard/components/corporate/CrmBanner.vue
+app/javascript/dashboard/components/corporate/CrmEmployees.vue
+app/javascript/dashboard/components/corporate/StaffManagement.vue
+app/javascript/dashboard/components/corporate/TelegramSetup.vue
+app/javascript/dashboard/components/corporate/phone.js
+app/javascript/dashboard/composables/useCorporate.js
+app/javascript/dashboard/components/widgets/conversation/ConversationBox.vue

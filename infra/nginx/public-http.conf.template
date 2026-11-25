@@ -1,0 +1,12 @@
+# Managed by corporate Chatwoot configure-domain.py
+server {
+    listen 80;
+    listen [::]:80;
+    server_name __DOMAIN__;
+    access_log off;
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/pravburo-chatwoot-acme;
+        default_type text/plain;
+    }
+    location / { return 503; }
+}

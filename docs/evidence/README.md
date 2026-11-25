@@ -1,0 +1,1 @@
+Operational evidence, screenshots, staff details and deployment reports in JSON are kept outside GitHub. References to those artifacts in historical documents refer to the private working copy. Re-run the supplied tests to generate your own evidence.

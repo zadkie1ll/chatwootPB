@@ -1,0 +1,11 @@
+app/javascript/dashboard/components/corporate/CorporateToolbar.vue
+app/javascript/dashboard/components/corporate/StaffManagement.vue
+app/javascript/dashboard/components/corporate/TelegramSetup.vue
+app/javascript/dashboard/composables/useCorporate.js
+app/javascript/dashboard/App.vue
+app/javascript/dashboard/api/ApiClient.js
+app/javascript/dashboard/api/CacheEnabledApiClient.js
+app/javascript/dashboard/components-next/Contacts/ContactsHeader/ContactHeader.vue
+app/javascript/dashboard/components-next/message/MessageMeta.vue
+app/javascript/dashboard/components-next/sidebar/Sidebar.vue
+app/javascript/dashboard/helper/actionCable.js
