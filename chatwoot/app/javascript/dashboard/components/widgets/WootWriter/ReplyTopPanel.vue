@@ -120,6 +120,7 @@ export default {
       handleNoteClick,
       REPLY_EDITOR_MODES,
       captainTasksEnabled,
+      corporateAi: Boolean(window.chatwootConfig?.corporateAccessEnabled),
       handleCopilotAction,
       showCopilotMenu,
       copilotToggleRef,
@@ -167,7 +168,10 @@ export default {
         </span>
       </div>
     </div>
-    <div v-if="captainTasksEnabled" class="flex items-center gap-2">
+    <div
+      v-if="captainTasksEnabled || corporateAi"
+      class="flex items-center gap-2"
+    >
       <div class="relative">
         <NextButton
           ref="copilotToggleRef"
@@ -178,6 +182,7 @@ export default {
             'text-n-violet-9 bg-n-violet-3': showCopilotMenu,
           }"
           sm
+          :aria-label="$t('CORPORATE.AI_TOOLS')"
           icon="i-ph-sparkle-fill"
           @click="toggleCopilotMenu"
         />

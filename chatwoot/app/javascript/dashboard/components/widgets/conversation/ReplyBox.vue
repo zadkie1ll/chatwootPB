@@ -6,6 +6,7 @@ import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useTrack } from 'dashboard/composables';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 
+import SummaryDialog from 'dashboard/components/corporate/SummaryDialog.vue';
 import ReplyToMessage from './ReplyToMessage.vue';
 import AttachmentPreview from 'dashboard/components/widgets/AttachmentsPreview.vue';
 import ReplyTopPanel from 'dashboard/components/widgets/WootWriter/ReplyTopPanel.vue';
@@ -75,6 +76,7 @@ export default {
     EmojiIconPicker,
     MessageSignatureMissingAlert,
     ReplyBottomPanel,
+    SummaryDialog,
     ReplyEmailHead,
     ReplyToMessage,
     ReplyTopPanel,
@@ -117,7 +119,7 @@ export default {
       },
       Enter: {
         action: e => {
-          if (isComposing(e)) return;
+          if (isComposing(e) || e.shiftKey) return;
           if (proxy.isAValidEvent('enter')) {
             proxy.onSendReply();
             e.preventDefault();
@@ -176,6 +178,7 @@ export default {
       replyType: REPLY_EDITOR_MODES.REPLY,
       draftConversationId: null,
       draftReplyMode: null,
+      corporateSummaryOpen: false,
       bccEmails: '',
       ccEmails: '',
       toEmails: '',
@@ -550,6 +553,7 @@ export default {
         this.setCCAndToEmailsFromLastChat();
         this.subject = '';
         // Reset Copilot editor state (includes cancelling ongoing generation)
+        this.corporateSummaryOpen = false;
         this.copilot.reset();
         // Default to a note on calls so a reply is not sent as SMS by accident.
         // Only on open, so an agent who switches to reply keeps it.
@@ -804,7 +808,9 @@ export default {
         !this.showVariablesMenu &&
         !this.showMacrosMenu &&
         this.isFocused &&
-        this.isEditorHotKeyEnabled(selectedKey)
+        (window.chatwootConfig?.corporateAccessEnabled
+          ? selectedKey === 'enter'
+          : this.isEditorHotKeyEnabled(selectedKey))
       );
     },
     onPaste(e) {
@@ -1052,6 +1058,10 @@ export default {
       this.onFocus();
     },
     executeCopilotAction(action, data) {
+      if (window.chatwootConfig?.corporateAccessEnabled) {
+        if (action === 'summarize') this.corporateSummaryOpen = true;
+        return;
+      }
       this.copilot.execute(action, data);
     },
     clearMessage() {
@@ -1576,6 +1586,13 @@ export default {
       />
     </Transition>
 
+    <SummaryDialog
+      v-if="corporateSummaryOpen"
+      :key="conversationId"
+      :account-id="$route.params.accountId"
+      :conversation-id="conversationId"
+      @close="corporateSummaryOpen = false"
+    />
     <WhatsappTemplates
       :inbox-id="inbox.id"
       :show="showWhatsAppTemplatesModal"

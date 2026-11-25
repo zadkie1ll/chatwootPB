@@ -24,7 +24,8 @@ class Corporate::IncomingMessage
       record.contact = identity.contact
     end
     contact_inbox.conversations.order(:id).last || Conversation.create!(account: @account, inbox: @inbox,
-                                                                        contact: identity.contact, contact_inbox: contact_inbox)
+                                                                        contact: identity.contact, contact_inbox: contact_inbox,
+                                                                        additional_attributes: { corporate_channel: 'telegram' })
   end
 
   def delete_message(message)

@@ -39,6 +39,7 @@ const replyMode = useMapGetter('draftMessages/getReplyEditorMode');
 // Selection-based menu items (when text is selected)
 const menuItems = computed(() => {
   const items = [];
+  if (window.chatwootConfig?.corporateAccessEnabled) return items;
   // for now, we don't allow improving just  aprt of the selection
   // we will add this feature later. Once we do, we can revert the change
   const hasSelection = false;
@@ -116,6 +117,17 @@ const menuItems = computed(() => {
 });
 
 const generalMenuItems = computed(() => {
+  if (window.chatwootConfig?.corporateAccessEnabled) {
+    return props.conversationId
+      ? [
+          {
+            label: t('CORPORATE.SUMMARY_TITLE'),
+            key: 'summarize',
+            icon: 'i-fluent-text-bullet-list-square-sparkle-32-regular',
+          },
+        ]
+      : [];
+  }
   const items = [];
   if (props.conversationId && replyMode.value === REPLY_EDITOR_MODES.REPLY) {
     items.push({

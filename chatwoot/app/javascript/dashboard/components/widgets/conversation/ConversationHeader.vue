@@ -1,4 +1,5 @@
 <script setup>
+import ChannelBadge from 'dashboard/components/corporate/ChannelBadge.vue';
 import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useStore } from 'vuex';
@@ -139,6 +140,11 @@ const copyConversationId = async () => {
           >
             {{ currentContact.name }}
           </span>
+          <ChannelBadge
+            :channel="
+              currentChat.additional_attributes?.corporate_channel || ''
+            "
+          />
           <fluent-icon
             v-if="!isHMACVerified"
             v-tooltip="$t('CONVERSATION.UNVERIFIED_SESSION')"

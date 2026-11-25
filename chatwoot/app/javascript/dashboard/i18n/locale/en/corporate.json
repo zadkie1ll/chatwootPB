@@ -110,6 +110,17 @@
       "OK": "Message processing is running",
       "QUEUES": "Waiting: incoming — {incoming}, outgoing — {outgoing}",
       "REFRESH": "Check status"
-    }
+    },
+    "AI_TOOLS": "AI tools",
+    "SUMMARY_TITLE": "Summarize conversation",
+    "SUMMARY_LOADING": "Preparing conversation summary…",
+    "SUMMARY_TRUNCATED": "Summary covers the latest 200 messages, up to 32,000 characters.",
+    "SUMMARY_NOTICE": "AI can make mistakes. This summary is visible only here and is not sent to the customer.",
+    "CLOSE": "Close",
+    "CLIENT_PHONE": "Customer phone",
+    "INVALID_PHONE": "Enter a valid phone number.",
+    "ENTER_HINT": "Enter — send · Shift+Enter — new line",
+    "RETRY": "Try again",
+    "CANCEL": "Cancel"
   }
 }

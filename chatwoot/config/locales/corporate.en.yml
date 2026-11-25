@@ -19,5 +19,14 @@ en:
     invalid_phone: "Enter a valid international phone number."
     invalid_deal_url: "Enter a deal link from your Bitrix24 portal."
     provide_phone_or_deal: "Check the Bitrix24 configuration and employee mapping."
-  media_pending: Downloading attachment
-  media_failed: Attachment is unavailable or did not pass verification
+    media_pending: Downloading attachment
+    media_failed: Attachment is unavailable or did not pass verification
+
+    summary:
+      busy: "Please wait a moment before requesting another summary."
+      empty: "No text messages to summarize yet."
+      not_configured: "The OpenAI key is not configured on the server."
+      invalid_key: "OpenAI rejected the key. Ask the administrator to check it."
+      quota: "OpenAI request limit or available balance has been reached. Try again later."
+      unavailable: "Unable to generate a summary. Try again later."
+      incomplete: "The summary could not be completed. Try again later."

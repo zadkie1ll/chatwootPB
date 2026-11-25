@@ -47,6 +47,10 @@ models:
     credit_multiplier: 1
 
 features:
+  corporate_summary:
+    models: [gpt-6-luna]
+    default: gpt-6-luna
+    internal: true
   conversation_completion:
     models:
       [

@@ -26,6 +26,9 @@ def private_values():
                     values.add(value.encode())
     for filename in (ROOT / 'secrets').glob('*access.txt'):
         values.update(value.encode() for value in re.findall(r'^Пароль: (.+)$', filename.read_text(), re.M) if len(value) >= 12)
+    openai_key = ROOT / 'secrets/openai/api-key'
+    if openai_key.exists():
+        values.add(openai_key.read_bytes().strip())
     baseline = ROOT / 'secrets/baseline.json'
     if baseline.exists():
         def collect(item):

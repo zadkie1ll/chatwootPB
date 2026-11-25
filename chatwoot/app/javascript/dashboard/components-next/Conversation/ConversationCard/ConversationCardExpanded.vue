@@ -1,4 +1,5 @@
 <script setup>
+import ChannelBadge from 'dashboard/components/corporate/ChannelBadge.vue';
 import { computed, useTemplateRef } from 'vue';
 import { getLastMessage } from 'dashboard/helper/conversationHelper';
 import CardAvatar from './CardAvatar.vue';
@@ -218,6 +219,9 @@ const selectedModel = computed({
         :class="orderClass('name')"
       >
         {{ currentContact.name }}
+        <ChannelBadge
+          :channel="chat.additional_attributes?.corporate_channel || ''"
+        />
       </h4>
 
       <CardContent

@@ -39,12 +39,23 @@ class Corporate::StartConversation
     end
     identity.update!(verified_phone: phone) if identity.verified_phone != phone
     contact.update!(phone_number: phone) if contact.phone_number != phone
+    inbox = telegram_inbox
+
+    contact_inbox = ContactInbox.find_or_create_by!(inbox: inbox, source_id: external_user) { |record| record.contact = contact }
+    conversation_for(contact_inbox, contact, inbox)
+  end
+
+  def telegram_inbox
     inbox = @account.inboxes.find(ENV.fetch('CORPORATE_INBOX_ID'))
     raise ArgumentError unless inbox.api?
 
-    contact_inbox = ContactInbox.find_or_create_by!(inbox: inbox, source_id: external_user) { |record| record.contact = contact }
+    inbox
+  end
+
+  def conversation_for(contact_inbox, contact, inbox)
     conversation = contact_inbox.conversations.order(:id).last
-    conversation ||= Conversation.create!(account: @account, inbox: inbox, contact: contact, contact_inbox: contact_inbox)
+    conversation ||= Conversation.create!(account: @account, inbox: inbox, contact: contact, contact_inbox: contact_inbox,
+                                          additional_attributes: { corporate_channel: 'telegram' })
     conversation.reload
   end
 end

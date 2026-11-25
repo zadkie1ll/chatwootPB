@@ -61,6 +61,7 @@ x-app: &app
   networks: [lab]
   volumes:
     - chatwoot_storage:/app/storage
+    - ./secrets/openai:/run/secrets/openai:ro
     - ./tests/baseline:/lab:ro
   tmpfs:
     - /app/tmp

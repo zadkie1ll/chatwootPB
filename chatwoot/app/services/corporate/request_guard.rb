@@ -15,6 +15,7 @@ class Corporate::RequestGuard
     'search' => %w[index conversations contacts messages],
     'notifications' => %w[index update destroy read_all destroy_all unread_count snooze unread],
     'conversations/unread_counts' => %w[index],
+    'corporate/summaries' => %w[create],
     'corporate/messages' => %w[update],
     'corporate/conversations' => %w[create],
     'corporate/ownerships' => %w[index update audit]

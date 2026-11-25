@@ -164,6 +164,11 @@ export default {
     };
   },
   computed: {
+    corporateEnterSend() {
+      return (
+        window.chatwootConfig?.corporateAccessEnabled && !this.isRecordingAudio
+      );
+    },
     ...mapGetters({
       accountId: 'getCurrentAccountId',
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
@@ -383,7 +388,10 @@ export default {
         @click="toggleInsertArticle"
       />
     </div>
-    <div class="right-wrap">
+    <span v-if="corporateEnterSend" class="text-xs text-n-slate-11">{{
+      $t('CORPORATE.ENTER_HINT')
+    }}</span>
+    <div v-if="!corporateEnterSend" class="right-wrap">
       <NextButton
         :label="sendButtonText"
         type="submit"

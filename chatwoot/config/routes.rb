@@ -225,6 +225,7 @@ Rails.application.routes.draw do
             resource :access, only: [:show], controller: :access do
               get :staff
             end
+            post 'conversations/:conversation_id/summary', to: 'summaries#create'
             put 'conversations/:conversation_id/messages/:id/edit', to: 'messages#update'
             resources :conversations, only: [:create]
             resources :ownerships, only: [:index, :update] do

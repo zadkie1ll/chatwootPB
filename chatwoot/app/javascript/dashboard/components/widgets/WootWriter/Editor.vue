@@ -617,11 +617,17 @@ function toggleSignatureInEditor(signatureEnabled) {
 }
 
 function isEnterToSendEnabled() {
-  return isEditorHotKeyEnabled('enter');
+  return (
+    window.chatwootConfig?.corporateAccessEnabled ||
+    isEditorHotKeyEnabled('enter')
+  );
 }
 
 function isCmdPlusEnterToSendEnabled() {
-  return isEditorHotKeyEnabled('cmd_enter');
+  return (
+    !window.chatwootConfig?.corporateAccessEnabled &&
+    isEditorHotKeyEnabled('cmd_enter')
+  );
 }
 
 function onImageInsertInEditor(fileUrl) {

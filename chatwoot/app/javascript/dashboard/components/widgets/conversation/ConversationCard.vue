@@ -1,4 +1,5 @@
 <script setup>
+import ChannelBadge from 'dashboard/components/corporate/ChannelBadge.vue';
 import { computed, ref, watch } from 'vue';
 import { getLastMessage } from 'dashboard/helper/conversationHelper';
 import Avatar from 'next/avatar/Avatar.vue';
@@ -179,10 +180,13 @@ watch(
         </div>
       </div>
       <h4
-        class="conversation--user text-sm my-0 mx-2 capitalize pt-0.5 text-ellipsis overflow-hidden whitespace-nowrap flex-1 min-w-0 ltr:pr-16 rtl:pl-16 text-n-slate-12"
+        class="conversation--user flex items-center gap-1 text-sm my-0 mx-2 capitalize pt-0.5 text-ellipsis overflow-hidden whitespace-nowrap flex-1 min-w-0 ltr:pr-16 rtl:pl-16 text-n-slate-12"
         :class="hasUnread ? 'font-semibold' : 'font-medium'"
       >
-        {{ currentContact.name }}
+        <span class="truncate">{{ currentContact.name }}</span>
+        <ChannelBadge
+          :channel="chat.additional_attributes?.corporate_channel || ''"
+        />
       </h4>
       <VoiceCallStatus
         v-if="voiceCallData.status"
