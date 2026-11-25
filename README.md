@@ -1,6 +1,6 @@
 # Корпоративный мультимессенджер на Chatwoot CE
 
-Основное ТЗ: [CHATWOOT_CODEX_SPEC.md](CHATWOOT_CODEX_SPEC.md). Рабочая версия поддерживает личный Telegram, распределение переписок между менеджерами, редактирование сообщений, получение медиа и интеграцию с Битрикс24. Используется Chatwoot Community Edition; Enterprise-компоненты исключены. MAX и изменение интерфейса — следующий этап.
+Основное ТЗ: [CHATWOOT_CODEX_SPEC.md](CHATWOOT_CODEX_SPEC.md). Рабочая версия поддерживает личный Telegram, распределение переписок между менеджерами, редактирование сообщений, получение медиа, сводку OpenAI и интеграцию с Битрикс24. Диалоги создаются кнопкой «+»; Enter отправляет сообщение, Shift+Enter добавляет строку. Используется Chatwoot Community Edition; Enterprise-компоненты исключены. Подключение MAX — следующий этап.
 
 Приложение: [mess.prav-buro.ru](https://mess.prav-buro.ru/app/login). Актуальное состояние: [docs/current-status.md](docs/current-status.md). [Подключение Telegram и работа менеджеров](docs/user-guide.md), [эксплуатация](docs/operations.md), [настройка сервера](docs/server-setup.md).
 
