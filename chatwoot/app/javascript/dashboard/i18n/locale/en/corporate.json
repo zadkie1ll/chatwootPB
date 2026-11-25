@@ -121,6 +121,28 @@
     "INVALID_PHONE": "Enter a valid phone number.",
     "ENTER_HINT": "Enter — send · Shift+Enter — new line",
     "RETRY": "Try again",
-    "CANCEL": "Cancel"
+    "CANCEL": "Cancel",
+    "MAX": {
+      "TITLE": "Connect personal MAX — test",
+      "PILOT": "Use the test account. This step checks login and session persistence; messages are not yet forwarded to managers, CRM or AI.",
+      "SCAN": "Open MAX on your phone → Profile → Devices → Scan the QR code. Keep this screen private.",
+      "QR_ALT": "Private MAX sign-in QR code",
+      "PASSWORD": "MAX additional protection password",
+      "ERROR": "Unable to complete MAX sign-in. Check confirmation on your phone and try again.",
+      "START": "Show MAX QR code",
+      "STOP": "Stop test MAX connection",
+      "STATUS": {
+        "LOADING": "Loading…",
+        "DISCONNECTED": "Not connected",
+        "STARTING": "Starting connection…",
+        "QR_REQUIRED": "Waiting for QR confirmation",
+        "PASSWORD_REQUIRED": "Additional password required",
+        "AUTHENTICATING": "Checking sign-in…",
+        "CONNECTED": "MAX connected",
+        "RECONNECTING": "Reconnecting to MAX…",
+        "ERROR": "MAX sign-in did not complete",
+        "UNAVAILABLE": "MAX test gateway unavailable"
+      }
+    }
   }
 }

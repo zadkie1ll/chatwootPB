@@ -113,3 +113,34 @@ class ReliabilityTests(TestCase):
         self.assertEqual(sent['attachment_error'], 'attachment_rejected')
         self.assertEqual(sent['attachments'], [])
         self.assertEqual(row.state, 'processed')
+
+
+class MaxPilotRelayTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.environment = patch.dict('os.environ', {'INTEGRATION_API_TOKEN': 'a' * 64,
+            'MAX_GATEWAY_URL': 'http://max-gateway:8092', 'MAX_GATEWAY_TOKEN': 'm' * 64})
+        self.environment.start()
+        self.addCleanup(self.environment.stop)
+
+    def test_max_auth_requires_internal_service_credentials(self):
+        self.assertEqual(self.client.get('/max-channel/status/').status_code, 401)
+
+    def test_password_is_relayed_only_in_service_authenticated_post(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + 'a' * 64)
+        with patch('delivery.views.httpx.request') as call:
+            call.return_value.status_code = 200
+            call.return_value.json.return_value = {'status': 'authenticating'}
+            result = self.client.post('/max-channel/password/', {'attempt_id': 'synthetic', 'password': 'SyntheticPassword'}, format='json')
+            self.assertEqual(result.status_code, 200)
+            self.assertEqual(result['Cache-Control'], 'no-store')
+            self.assertNotIn('SyntheticPassword', str(result.data))
+            self.assertEqual(call.call_args.args, ('POST', 'http://max-gateway:8092/auth/password'))
+            self.assertEqual(call.call_args.kwargs['headers']['Authorization'], 'Bearer ' + 'm' * 64)
+
+    def test_unknown_steps_and_unexpected_fields_do_not_reach_gateway(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + 'a' * 64)
+        with patch('delivery.views.httpx.request') as call:
+            self.assertEqual(self.client.post('/max-channel/send/', {}, format='json').status_code, 404)
+            self.assertEqual(self.client.post('/max-channel/start/', {'token': 'not-accepted'}, format='json').status_code, 422)
+            call.assert_not_called()

@@ -110,3 +110,26 @@ def diagnostics(request):
 def transport_gateway_health():
     from .transport import gateway
     return gateway('GET', '/health')
+
+
+@api_view(['GET', 'POST'])
+def max_channel(request, step):
+    allowed = [('GET', 'status'), ('POST', 'start'), ('POST', 'password'), ('POST', 'cancel')]
+    if (request.method, step) not in allowed:
+        return Response(status=404)
+    if request.method == 'POST' and not isinstance(request.data, dict):
+        return Response({'error': 'invalid_request'}, status=422)
+    expected = {'start': set(), 'password': {'password', 'attempt_id'}, 'cancel': {'attempt_id'}}
+    if request.method == 'POST' and set(request.data) != expected[step]:
+        return Response({'error': 'invalid_request'}, status=422)
+    if step == 'password' and (not isinstance(request.data['password'], str) or not 1 <= len(request.data['password']) <= 256):
+        return Response({'error': 'invalid_request'}, status=422)
+    try:
+        response = httpx.request(request.method, os.environ['MAX_GATEWAY_URL'] + '/auth/' + step,
+                                 json=request.data if request.method == 'POST' else None,
+                                 headers={'Authorization': 'Bearer ' + os.environ['MAX_GATEWAY_TOKEN']}, timeout=8)
+        result = Response(response.json(), status=response.status_code)
+        result['Cache-Control'] = 'no-store'
+        return result
+    except (httpx.HTTPError, ValueError, KeyError):
+        return Response({'error': 'channel_unavailable'}, status=503)

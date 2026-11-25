@@ -23,6 +23,7 @@ class Corporate::RequestGuard
   SHARED_READS = %w[agents assignable_agents teams canned_responses custom_attribute_definitions custom_filters].freeze
 
   DEDICATED_ACTIONS = {
+    'corporate/max_channel' => { 'technical_admin' => %w[show connect] },
     'corporate/health' => { 'supervisor' => %w[show] },
     'corporate/channel' => { 'technical_admin' => %w[show connect] },
     'corporate/staff' => { 'supervisor' => %w[index create destroy] },

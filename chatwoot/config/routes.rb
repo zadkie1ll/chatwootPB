@@ -212,6 +212,9 @@ Rails.application.routes.draw do
             resource :twilio_channel, only: [:create]
           end
           namespace :corporate do
+            resource :max_channel, only: [:show], controller: :max_channel do
+              post :connect
+            end
             get 'crm/employees', to: 'crm#employees'
             resource :health, only: [:show], controller: :health
             put 'crm/employees/:id', to: 'crm#update_employee'

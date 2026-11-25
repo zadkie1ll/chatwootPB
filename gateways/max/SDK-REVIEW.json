@@ -1,0 +1,11 @@
+{
+  "package": "maxapi-python",
+  "version": "2.5.0",
+  "repository": "https://github.com/MaxApiTeam/PyMax",
+  "reviewed_commit": "c4cb917d354a1179be625925530d72c8aaa969ff",
+  "license": "MIT",
+  "installed_python_files_compared": 188,
+  "source_mismatches": 0,
+  "scope": "authentication, session storage and logging boundaries; not a full SDK audit",
+  "live_account_tested": false
+}

@@ -224,6 +224,27 @@ services:
       - ./scripts/server/bootstrap.rb:/bootstrap/bootstrap.rb:ro
     restart: 'no'
 
+  max-gateway:
+    profiles: [max-poc]
+    <<: *runtime
+    mem_limit: 384m
+    image: ${MAX_GATEWAY_IMAGE:-corporate-max-gateway:poc-dev}
+    build:
+      context: ./gateways/max
+      args: {PYTHON_IMAGE: "${PYTHON_IMAGE}"}
+    environment:
+      MAX_GATEWAY_TOKEN: ${MAX_GATEWAY_TOKEN:-}
+      MAX_DATA_DIR: /data
+    volumes:
+      - ./secrets/max:/data
+    networks: [lab, max-egress]
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'python', '-c', 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8092/health",timeout=3)']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   telegram-gateway:
     <<: *runtime
     mem_limit: 768m
@@ -264,6 +285,8 @@ services:
       GATEWAY_TOKEN: ${GATEWAY_TOKEN}
       CHATWOOT_INTERNAL_URL: http://chatwoot-web:3000
       TELEGRAM_GATEWAY_URL: http://telegram-gateway:8091
+      MAX_GATEWAY_URL: http://max-gateway:8092
+      MAX_GATEWAY_TOKEN: ${MAX_GATEWAY_TOKEN:-}
       TELEGRAM_MODE: ${TELEGRAM_MODE:-personal}
       CLAMAV_HOST: clamav
       BITRIX_ENABLED: ${BITRIX_ENABLED:-false}
@@ -343,6 +366,7 @@ networks:
   antivirus-egress: {}
   crm-egress: {}
   ai-egress: {}
+  max-egress: {}
 
 volumes:
   clamav_data:

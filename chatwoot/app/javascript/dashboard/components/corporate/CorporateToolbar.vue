@@ -7,6 +7,7 @@ import {
   corporateCrmEnabled,
 } from 'dashboard/composables/useCorporate';
 import { useI18n } from 'vue-i18n';
+import MaxSetup from './MaxSetup.vue';
 import TelegramSetup from './TelegramSetup.vue';
 import StaffManagement from './StaffManagement.vue';
 import CrmEmployees from './CrmEmployees.vue';
@@ -331,7 +332,10 @@ const loadAudit = async delta => {
           </template>
         </section>
       </template>
-      <TelegramSetup v-else :account-id="accountId" />
+      <div v-else class="flex flex-col gap-6">
+        <TelegramSetup :account-id="accountId" />
+        <MaxSetup :account-id="accountId" />
+      </div>
     </section>
   </div>
 </template>
