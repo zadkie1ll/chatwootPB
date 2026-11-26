@@ -14,8 +14,17 @@ from .models import WebhookReceipt
 
 
 class ResolveRequest(serializers.Serializer):
-    phone = serializers.RegexField(r'^\+[1-9]\d{6,14}$')
+    phone = serializers.RegexField(r'^\+[1-9]\d{6,14}$', required=False)
+    username = serializers.RegexField(r'^[A-Za-z][A-Za-z0-9_]{0,31}$', required=False)
     channel = serializers.ChoiceField(choices=['telegram', 'max'])
+
+
+    def validate(self, attrs):
+        if ('phone' in attrs) == ('username' in attrs):
+            raise serializers.ValidationError('Provide one recipient')
+        if 'username' in attrs and attrs['channel'] != 'telegram':
+            raise serializers.ValidationError('Username search is Telegram only')
+        return attrs
 
 
 @api_view(['GET', 'POST'])

@@ -179,3 +179,11 @@ class MultiChannelDeliveryTests(TestCase):
     def test_event_keys_do_not_collide_across_channels(self):
         event = dict(channel='telegram', external_account_id='1', external_chat_id='2', external_message_id='3', event_type='received')
         self.assertNotEqual(worker.event_key(event), worker.event_key({**event, 'channel': 'max'}))
+
+
+class RecipientLookupValidationTests(TestCase):
+    def test_username_is_telegram_only_and_cannot_be_mixed_with_a_phone(self):
+        from .views import ResolveRequest
+        self.assertTrue(ResolveRequest(data={'channel': 'telegram', 'username': 'sample_user'}).is_valid())
+        self.assertFalse(ResolveRequest(data={'channel': 'max', 'username': 'sample_user'}).is_valid())
+        self.assertFalse(ResolveRequest(data={'channel': 'telegram', 'username': 'sample_user', 'phone': '+79991234567'}).is_valid())

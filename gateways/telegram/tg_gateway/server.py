@@ -49,20 +49,25 @@ def create_app(directory=None, mode=None):
 
     async def resolve(request):
         data = await request.json()
-        phone = data['phone']
-        if not re.fullmatch(r'\+[1-9]\d{6,14}', phone):
-            raise ValueError('invalid_phone')
+        phone, username = data.get('phone'), data.get('username')
+        if bool(phone) == bool(username):
+            return web.json_response({'error': 'invalid_recipient'}, status=422)
+        if phone and not re.fullmatch(r'\+[1-9]\d{6,14}', phone):
+            return web.json_response({'error': 'invalid_phone'}, status=422)
+        if username and not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,31}', username):
+            return web.json_response({'error': 'invalid_username'}, status=422)
+        target = phone or '@' + username
         if mode == 'mock':
-            if phone.endswith('0000'):
+            if phone and phone.endswith('0000'):
                 return web.json_response({'error': 'recipient_unavailable'}, status=422)
-            result = {'external_account_id': 'mock-personal', 'external_user_id': phone[1:], 'name': 'Synthetic Telegram ' + phone[-4:]}
+            result = {'external_account_id': 'mock-personal', 'external_user_id': phone[1:] if phone else str(int.from_bytes(username.encode()[:8], 'big')), 'name': 'Synthetic Telegram'}
         else:
             if not driver.account_id:
                 return web.json_response({'error': 'channel_unavailable'}, status=503)
             if journal.retry_after():
                 return web.json_response({'error': 'channel_unavailable'}, status=503)
             try:
-                result = await driver.resolve(phone)
+                result = await driver.resolve(target)
             except errors.FloodWaitError as error:
                 journal.pause(error.seconds)
                 return web.json_response({'error': 'channel_unavailable'}, status=503)

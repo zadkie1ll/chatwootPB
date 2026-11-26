@@ -112,7 +112,15 @@ class Messaging:
 
     async def resolve(self, phone):
         client = self.client
-        user = await client.search_by_phone(phone)
+        user = None
+        dialogs = {chat.id for chat in (getattr(client, 'chats', None) or []) if chat.type == 'DIALOG'}
+        for peer in self.journal.get('tracked_peers', []):
+            if (client.me.contact.id ^ peer) in dialogs and self.journal.get('resolved_phone/' + str(peer)) == phone:
+                user = await client.get_user(peer)
+                if user:
+                    break
+        if user is None:
+            user = await client.search_by_phone(phone)
         if phone == self.test_phone and self.allowed_peers:
             self.allowed_peers.add(user.id)
             self.journal.put('pilot_peer/' + digest(phone), user.id)
