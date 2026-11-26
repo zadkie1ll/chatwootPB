@@ -399,6 +399,7 @@ export default {
 
   created() {
     emitter.on(BUS_EVENTS.SCROLL_TO_MESSAGE, this.onScrollToMessage);
+    emitter.on(BUS_EVENTS.MESSAGE_SENT, this.scrollAfterSend);
     // Anything that wants to write must bring the folded editor back first.
     emitter.on(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.showReplyBox);
     emitter.on(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, this.showReplyBox);
@@ -416,11 +417,19 @@ export default {
   },
 
   methods: {
+    scrollAfterSend() {
+      this.hasUserScrolled = false;
+      this.$nextTick(() => {
+        this.isProgrammaticScroll = true;
+        this.conversationPanel.scrollTop = this.conversationPanel.scrollHeight;
+      });
+    },
     fetchAllAttachmentsFromCurrentChat() {
       this.$store.dispatch('fetchAllAttachments', this.currentChat.id);
     },
     removeBusListeners() {
       emitter.off(BUS_EVENTS.SCROLL_TO_MESSAGE, this.onScrollToMessage);
+      emitter.off(BUS_EVENTS.MESSAGE_SENT, this.scrollAfterSend);
       emitter.off(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.showReplyBox);
       emitter.off(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, this.showReplyBox);
       emitter.off(CMD_AI_ASSIST, this.showReplyBox);

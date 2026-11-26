@@ -156,10 +156,12 @@ const statusToShow = computed(() => {
       </time>
     </div>
     <Icon v-if="isPrivate" icon="i-lucide-lock-keyhole" class="size-3" />
-    <span v-if="corporateDelivery" class="text-xs text-n-slate-11">{{
-      t(`CORPORATE.DELIVERY.${corporateDelivery}`)
-    }}</span>
+    <span
+      v-if="corporateDelivery && corporateDelivery !== 'sent'"
+      class="text-xs text-n-slate-11"
+    >
+      {{ t(`CORPORATE.DELIVERY.${corporateDelivery}`) }}
+    </span>
     <MessageStatus v-else-if="showStatusIndicator" :status="statusToShow" />
   </div>
 </template>
-`

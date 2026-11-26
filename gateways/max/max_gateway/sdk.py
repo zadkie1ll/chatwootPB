@@ -75,3 +75,17 @@ async def edit(client, chat_id, message_id, text):
              'attachments': [item.model_dump(by_alias=True, exclude_none=True, exclude={'preview_data'}) for item in message.attaches]}
     await client._app.invoke(Opcode.MSG_EDIT, frame)
     return message_id
+
+
+async def read_mark(client, chat_id, peer):
+    # get_chat/get_chats return cached models, so request fresh protocol data.
+    from pymax.api.chats.payloads import GetChatInfoPayload
+    from pymax.api.chats.enums import ChatPayloadKey
+    from pymax.api.response import parse_payload_list
+    from pymax.types.domain import Chat
+    frame = GetChatInfoPayload(chat_ids=[chat_id])
+    response = await client._app.invoke(Opcode.CHAT_INFO, frame.to_payload())
+    for chat in parse_payload_list(response, ChatPayloadKey.CHATS, Chat):
+        if chat.id == chat_id and chat.type == 'DIALOG':
+            return chat.participants.get(peer, 0)
+    return 0

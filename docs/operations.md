@@ -73,7 +73,7 @@ Rails сохраняет сеть без выхода в интернет. Се�
 
 ## Выпуск MAX Personal 25.11.2026
 
-Текущая совместимая связка: CW `layout-product-20261126` (интерфейс поверх `max-product-20261125`), integration `max-delivery-20261125`, gateway MAX `delivery-20261125-final`. Telegram gateway сохраняет `reliable-20261125`. MAX_DELIVERY_ENABLED=true, MAX_CRM_ENABLED=true, CORPORATE_MAX_INBOX_ID указывает отдельный API inbox. Пустые MAX_TEST_PEER_IDS и MAX_TEST_PHONE означают полный режим. Внутренний MAX_GATEWAY_TOKEN и session остаются только в приватных файлах сервера.
+Текущая совместимая связка: CW `messaging-status-20261126` (поверх `layout-product-20261126`), integration `max-delivery-20261125`, gateway MAX `reads-final-20261126`. Telegram gateway использует `reads-20261126`. MAX_DELIVERY_ENABLED=true, MAX_CRM_ENABLED=true, CORPORATE_MAX_INBOX_ID указывает отдельный API inbox. Пустые MAX_TEST_PEER_IDS и MAX_TEST_PHONE означают полный режим. Внутренний MAX_GATEWAY_TOKEN и session остаются только в приватных файлах сервера.
 
 Канал создаёт `scripts/server/activate_max.rb`: запуск через Rails runner возвращает ID inbox для CORPORATE_MAX_INBOX_ID. `scripts/server/prepare-max.py` подготавливает секрет и профиль max-poc, но самостоятельно не авторизует аккаунт и не включает доставку. Вход и 2FA выполняет технический администратор в «Каналы». После проверки сессии и тестового обмена оператор включает флаги доставки/CRM и применяет конфигурацию согласованной связкой образов.
 
@@ -84,3 +84,6 @@ MAX journal: `secrets/max/delivery.sqlite3`, WAL/FULL. SDK session хранит�
 Несколько файлов MAX разделяет интерфейс: одна доставка на файл. Смешанный внешний payload фото+документ MAX отвергает как proto.payload. Прямой API не принимает такой пакет; его отказ не считается успешной доставкой. Медиа проверяется по реальному типу и ClamAV. Офисные форматы Apple разрешены, HTML/SVG остаются запрещены. Завершённые события/файлы gateway очищаются через 30 дней, незавершённые сохраняются.
 
 Процедуры backup по указанию владельца не менялись. Прежний backup не включает MAX session; после её потери потребуется повторный QR-вход. Ограничения и доказательства живых проверок: [MAX delivery](max-delivery-2026-11-25.md).
+
+
+Выпуск прочтений не требует миграций. Пока в журналах/очереди integration остаются события `read`, Rails должен поддерживать этот тип событий: не откатывать только Rails к версии до `messaging-product-20261126`. При проблеме шлюза можно вернуть его предыдущий образ, сохранив новый Rails и существующие журналы. TGS обрабатывается через thumbnail; прямого исполнения Lottie/JSON в браузере нет. MAX хранит отметки прочтения и запрашивает свежий CHAT_INFO без кэша SDK; Telegram восстанавливает их чтением GetPeerDialogs, без вызова readHistory от имени пользователя.

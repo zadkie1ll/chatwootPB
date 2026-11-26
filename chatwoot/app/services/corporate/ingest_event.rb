@@ -8,10 +8,21 @@ class Corporate::IngestEvent
     @lookup_needed = false
     event = event.with_indifferent_access
     Corporate::TelegramEvent.validate!(event)
-    @account.with_lock { process(event, attachments) }
+    @account.with_lock do
+      event[:event_type] == 'read' ? ingest_read(event) : process(event, attachments)
+    end
   end
 
   private
+
+  def ingest_read(event)
+    key = event_key(event)
+    return if CorporateInboxReceipt.exists?(account: @account, event_key: key)
+
+    Corporate::ReadReceipts.new(account: @account, inbox: @inbox).perform(event)
+    CorporateInboxReceipt.create!(account: @account, event_key: key)
+    nil
+  end
 
   def process(event, attachments)
     key = event_key(event)

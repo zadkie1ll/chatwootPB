@@ -142,6 +142,7 @@ class Attachment < ApplicationRecord
       height: file.metadata[:height]
     }
 
+    metadata[:meta] = meta.slice('telegram_custom_emoji_id') if Corporate.enabled? && meta.to_h['telegram_custom_emoji_id'].present?
     metadata[:data_url] = metadata[:thumb_url] = external_url if instagram_incoming_message?
     metadata
   end

@@ -47,7 +47,9 @@ const classToApply = computed(() => {
 });
 
 const allAttachments = computed(() => {
-  return Array.isArray(props.attachments) ? props.attachments : [];
+  return Array.isArray(props.attachments)
+    ? props.attachments.filter(item => !item.meta?.telegramCustomEmojiId)
+    : [];
 });
 
 const mediaAttachments = computed(() => {

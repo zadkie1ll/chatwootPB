@@ -1,6 +1,19 @@
 class Corporate::TelegramEvent
   def self.validate!(event)
     raise ArgumentError unless valid_identity?(event) && valid_message?(event) && valid_phone?(event)
+    raise ArgumentError if event[:event_type] == 'read' && !valid_read?(event)
+  end
+
+  def self.valid_read?(event)
+    return false unless event[:direction] == 'outgoing'
+    return true if event[:read_message_ids].nil?
+
+    ids = event[:read_message_ids]
+    event[:channel] == 'max' && ids.is_a?(Array) && ids.length.between?(1, 100) && valid_read_ids?(ids)
+  end
+
+  def self.valid_read_ids?(ids)
+    ids.all? { |id| id.is_a?(String) && id.match?(/\A\d{1,30}\z/) }
   end
 
   def self.valid_identity?(event)
@@ -16,7 +29,7 @@ class Corporate::TelegramEvent
   end
 
   def self.valid_message?(event)
-    event[:external_message_id].to_s.match?(/\A\d{1,30}\z/) && %w[received edited deleted media].include?(event[:event_type]) &&
+    event[:external_message_id].to_s.match?(/\A\d{1,30}\z/) && %w[received edited deleted media read].include?(event[:event_type]) &&
       %w[incoming outgoing].include?(event[:direction]) && event[:text].to_s.bytesize <= 100_000
   end
 

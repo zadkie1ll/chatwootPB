@@ -104,7 +104,7 @@ class Journal:
             self.finish(row['operation_id'], 'sent', external_message_id=str(message_id), external_message_ids=[str(message_id)])
 
     def save_event(self, event, media=False):
-        if event['event_type'] != 'deleted' and self.db.execute('SELECT 1 FROM deleted_messages WHERE message_id=?', (str(event['external_message_id']),)).fetchone():
+        if event['event_type'] not in ('deleted', 'read') and self.db.execute('SELECT 1 FROM deleted_messages WHERE message_id=?', (str(event['external_message_id']),)).fetchone():
             return False
         key = hashlib.sha256('/'.join(str(event.get(k, '')) for k in ('external_account_id', 'external_chat_id', 'external_message_id', 'event_type', 'revision')).encode()).hexdigest()
         self.db.execute('INSERT OR IGNORE INTO events(event_key,peer,message_id,direction,payload,created_at) VALUES(?,?,?,?,?,?)',
@@ -114,7 +114,8 @@ class Journal:
             self.db.execute('INSERT OR IGNORE INTO media_jobs(job_key,payload) VALUES(?,?)', (job_key, json.dumps(event)))
         index = {k: event.get(k) for k in ('schema_version', 'channel', 'external_account_id', 'external_chat_id',
                                           'external_user_id', 'external_message_id', 'sender_id', 'direction', 'origin')}
-        self.db.execute('INSERT OR REPLACE INTO message_index(message_id,payload) VALUES(?,?)', (str(event['external_message_id']), json.dumps(index)))
+        if event['event_type'] != 'read':
+            self.db.execute('INSERT OR REPLACE INTO message_index(message_id,payload) VALUES(?,?)', (str(event['external_message_id']), json.dumps(index)))
         self.db.commit()
         return True
 

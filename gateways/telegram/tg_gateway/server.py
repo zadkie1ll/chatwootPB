@@ -215,6 +215,7 @@ def create_app(directory=None, mode=None):
                             await driver.client.disconnect()
                         await asyncio.wait_for(driver.connect(), timeout=30)
                     await driver.process_media()
+                    await driver.poll_reads()
                 if count % 60 == 0:
                     journal.cleanup()
             except (OSError, errors.RPCError, asyncio.TimeoutError):

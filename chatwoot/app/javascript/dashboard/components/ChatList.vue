@@ -7,6 +7,7 @@ import {
   useFunctionGetter,
 } from 'dashboard/composables/store.js';
 
+import ResizableListPanel from 'dashboard/components-next/ResizableListPanel.vue';
 import ChatListHeader from './ChatListHeader.vue';
 import ConversationList from './ConversationList.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
@@ -910,12 +911,13 @@ watch(appliedFilters, () => resetBulkActions());
 </script>
 
 <template>
-  <div
-    class="flex flex-col flex-shrink-0 conversations-list-wrap bg-n-surface-1 relative"
-    :class="[
-      { hidden: !showConversationList },
-      isOnExpandedLayout ? 'basis-full' : 'w-[340px] 2xl:w-[412px]',
-    ]"
+  <ResizableListPanel
+    preference-key="conversation-list"
+    label-prefix="CONVERSATIONS"
+    :collapsible="false"
+    :full-width="isOnExpandedLayout"
+    class="conversations-list-wrap bg-n-surface-1"
+    :class="{ hidden: !showConversationList }"
   >
     <slot />
     <ChatListHeader
@@ -1021,5 +1023,5 @@ watch(appliedFilters, () => resetBulkActions());
       ref="resolveAttributesModalRef"
       @submit="handleResolveWithAttributes"
     />
-  </div>
+  </ResizableListPanel>
 </template>

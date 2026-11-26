@@ -3,10 +3,10 @@ import io
 import json
 import os
 import time
-import uuid
 from types import SimpleNamespace
 from pathlib import Path
 from telethon import TelegramClient, events, functions, types, errors
+from .media import DownloadTooLarge, custom_emojis, receive
 
 MAX_BYTES = 20 * 1024 * 1024
 
@@ -24,11 +24,14 @@ class PersonalDriver:
         self.phone = None
         self.phone_code_hash = None
         self.last_code_request = 0.0
+        self.read_poll_cursor = 0
+        self.last_read_poll = 0.0
 
     def build_client(self, api_id, api_hash):
         client = TelegramClient(str(self.directory / 'personal'), api_id, api_hash, catch_up=True,
                                 flood_sleep_threshold=0, sequential_updates=True)
         client.add_event_handler(self.on_new, events.NewMessage())
+        client.add_event_handler(self.on_read, events.MessageRead())
         client.add_event_handler(self.on_edit, events.MessageEdited())
         client.add_event_handler(self.on_delete, events.MessageDeleted())
         client.add_event_handler(self.on_random, events.Raw(types=types.UpdateMessageID))
@@ -128,6 +131,45 @@ class PersonalDriver:
                 return [str(update.id)]
         raise RuntimeError('send_outcome_unknown')
 
+    def save_read(self, peer, max_id):
+        if not self.account_id or peer <= 0 or max_id <= 0 or peer == 777000:
+            return
+        self.journal.save_event({'schema_version': 1, 'channel': 'telegram',
+            'external_account_id': self.account_id, 'external_chat_id': str(peer), 'external_user_id': str(peer),
+            'external_message_id': str(max_id), 'direction': 'outgoing', 'event_type': 'read', 'revision': '',
+            'text': '', 'attachments': [], 'origin': 'external'})
+
+    async def on_read(self, event):
+        await self.ready.wait()
+        if event.outbox and not event.contents and event.chat_id:
+            self.save_read(event.chat_id, event.max_id)
+
+    async def poll_reads(self):
+        if not self.connected or time.monotonic() - self.last_read_poll < 10 or self.journal.retry_after():
+            return
+        self.last_read_poll = time.monotonic()
+        rows = self.journal.db.execute('SELECT DISTINCT peer FROM sent_messages ORDER BY peer LIMIT 20 OFFSET ?', (self.read_poll_cursor,)).fetchall()
+        if not rows:
+            self.read_poll_cursor = 0
+            return
+        self.read_poll_cursor += len(rows)
+        peers = []
+        for row in rows:
+            try:
+                entity = await self.client.get_input_entity(int(row['peer']))
+                peers.append(types.InputDialogPeer(entity))
+            except ValueError:
+                continue
+        if not peers:
+            return
+        try:
+            result = await self.client(functions.messages.GetPeerDialogsRequest(peers=peers))
+            for dialog in result.dialogs:
+                if isinstance(dialog.peer, types.PeerUser):
+                    self.save_read(dialog.peer.user_id, dialog.read_outbox_max_id)
+        except errors.FloodWaitError as error:
+            self.journal.pause(error.seconds)
+
     async def on_random(self, update):
         self.journal.map_random_id(update.random_id, update.id)
 
@@ -156,7 +198,8 @@ class PersonalDriver:
         phone = '+' + raw_phone if raw_phone.isdigit() and 7 <= len(raw_phone) <= 15 and not raw_phone.startswith('0') else None
         ephemeral = getattr(message, 'ttl_period', None) or getattr(message.media, 'ttl_seconds', None)
         media = message.photo or message.document
-        media_id = str(getattr(media, 'id', ''))
+        emojis = custom_emojis(message)
+        media_id = '/'.join([str(getattr(media, 'id', '')), *(e['document_id'] for e in emojis)])
         base = {'schema_version': 1, 'channel': 'telegram', 'external_account_id': self.account_id,
                 'external_chat_id': str(event.chat_id), 'external_user_id': str(event.chat_id),
                 'external_message_id': str(message.id), 'sender_id': str(message.sender_id),
@@ -164,14 +207,15 @@ class PersonalDriver:
                 'direction': 'outgoing' if message.out else 'incoming', 'origin': 'official_client' if message.out else 'external',
                 'event_type': event_type, 'revision': self.revision(event),
                 'timestamp': message.date.isoformat(), 'text': '' if ephemeral else self.visible_text(message),
-                'attachments': [], 'voice': bool(message.voice), 'phone': phone, 'media_id': media_id}
+                'attachments': [], 'voice': bool(message.voice), 'phone': phone, 'media_id': media_id,
+                'custom_emojis': [] if ephemeral else emojis}
         if ephemeral:
             base['attachment_error'] = 'ephemeral_unsupported'
             base['attachment_state'] = 'failed'
         elif media and getattr(message.file, 'size', 0) and message.file.size > MAX_BYTES:
             base['attachment_error'] = 'attachment_too_large'
             base['attachment_state'] = 'failed'
-        elif media:
+        elif media or emojis:
             base['attachment_state'] = 'pending'
         elif message.media and not base['text']:
             base.update(attachment_state='failed', attachment_error='unsupported_type')
@@ -204,24 +248,15 @@ class PersonalDriver:
         if row is None or not self.connected or self.journal.retry_after():
             return
         base = json.loads(row['payload'])
-        key = uuid.uuid4().hex
-        target = self.directory / ('attachment-' + key)
-        partial = target.with_suffix('.partial')
         try:
             message = await self.client.get_messages(int(base['external_user_id']), ids=int(base['external_message_id']))
-            if not message or not message.media:
+            if not message or (not message.media and not custom_emojis(message)):
                 self.finish_media(row, base, 'media_unavailable')
                 return
-            with partial.open('wb') as output:
-                await asyncio.wait_for(self.client.download_media(message, file=BoundedDownload(output)), timeout=90)
-            if not partial.stat().st_size:
-                raise OSError('empty_download')
-            os.replace(partial, target)
-            filename = getattr(message.file, 'name', None) or ('photo.jpg' if message.photo else 'attachment.bin')
-            metadata = {'key': key, 'filename': Path(filename).name[:150],
-                        'content_type': getattr(message.file, 'mime_type', None) or 'application/octet-stream',
-                        'size': target.stat().st_size}
-            self.finish_media(row, base, attachments=[metadata])
+            attachments = await receive(self.client, message, self.directory)
+            self.finish_media(row, base, attachments=attachments)
+        except ValueError:
+            self.finish_media(row, base, 'unsupported_type')
         except DownloadTooLarge:
             self.finish_media(row, base, 'attachment_too_large')
         except errors.FloodWaitError as error:
@@ -231,8 +266,6 @@ class PersonalDriver:
             self.finish_media(row, base, 'media_unavailable')
         except (errors.RPCError, OSError, asyncio.TimeoutError):
             self.journal.media_retry(row)
-        finally:
-            partial.unlink(missing_ok=True)
 
     def finish_media(self, row, base, error=None, attachments=None):
         saved = self.journal.save_event({**base, 'event_type': 'media', 'source_revision': base['revision'],
@@ -257,19 +290,3 @@ class PersonalDriver:
         for message_id in event.deleted_ids:
             for prior in self.journal.deleted_events(message_id):
                 self.journal.save_event({**prior, 'text': '', 'attachments': [], 'event_type': 'deleted', 'revision': ''})
-
-
-class DownloadTooLarge(Exception):
-    pass
-
-
-class BoundedDownload:
-    def __init__(self, output):
-        self.output = output
-        self.size = 0
-
-    def write(self, data):
-        if self.size + len(data) > MAX_BYTES:
-            raise DownloadTooLarge()
-        self.size += len(data)
-        return self.output.write(data)

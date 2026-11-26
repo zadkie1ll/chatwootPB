@@ -11,3 +11,5 @@ json.width attachment_data[:width]
 json.height attachment_data[:height]
 json.created_at attachment.message.created_at.to_i
 json.sender attachment.message.sender.push_event_data if attachment.message.sender
+
+json.meta attachment_data[:meta] if attachment_data[:meta].present?

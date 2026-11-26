@@ -1,6 +1,7 @@
 <script setup>
 /* global axios */
 import { ref, computed, watch } from 'vue';
+import { onClickOutside, onKeyStroke } from '@vueuse/core';
 import { useRouter } from 'vue-router';
 import {
   corporateRole,
@@ -21,6 +22,13 @@ const router = useRouter();
 const role = ref('');
 const gatewayMode = ref('');
 const opened = ref(false);
+const toolbar = ref(null);
+onClickOutside(toolbar, () => {
+  opened.value = false;
+});
+onKeyStroke('Escape', () => {
+  opened.value = false;
+});
 const clients = ref([]);
 const owners = ref({});
 const managers = ref([]);
@@ -168,6 +176,7 @@ const loadAudit = async delta => {
 <template>
   <div
     v-if="enabled && accountId && role"
+    ref="toolbar"
     class="relative z-50 border-b border-n-weak bg-n-background p-2 text-sm"
   >
     <button

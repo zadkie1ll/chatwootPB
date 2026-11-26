@@ -154,7 +154,8 @@
     "LAYOUT": {
       "SHOW_INBOX": "Show inbox list",
       "HIDE_INBOX": "Hide inbox list",
-      "RESIZE_INBOX": "Resize inbox list"
+      "RESIZE_INBOX": "Resize inbox list",
+      "RESIZE_CONVERSATIONS": "Resize conversation list"
     }
   }
 }

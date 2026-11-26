@@ -27,6 +27,7 @@ class DeliveryTests(unittest.IsolatedAsyncioTestCase):
                          get_user=AsyncMock(return_value=NS(names=[], phone=None)),
                          get_chat_id=lambda first, second: first ^ second,
                          fetch_history=AsyncMock(return_value=[]), get_message=AsyncMock())
+        self.client._app = NS(invoke=AsyncMock(return_value=NS(payload={'chats': []})))
         self.manager = NS(client=self.client, connected=True, directory=Path(self.temp.name))
         with patch.dict(os.environ, {'MAX_DELIVERY_ENABLED': 'true', 'MAX_TEST_PEER_IDS': '20'}):
             self.driver = Messaging(self.manager, self.journal)
@@ -36,6 +37,35 @@ class DeliveryTests(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         self.journal.db.close()
         self.temp.cleanup()
+
+    async def test_read_receipt_ignores_own_reads_and_respects_confirmed_time(self):
+        await self.driver.capture(message(sender=10, id=101, time=9999999999999))
+        await self.driver.capture(message(sender=10, id=102, time=9999999999999 + 1000))
+        self.driver.record_read(10, 9999999999999 + 10000)
+        self.assertFalse(any(e['event_type'] == 'read' for e in self.journal.events()))
+        self.driver.record_read(20, 9999999999999)
+        receipts = [e for e in self.journal.events() if e['event_type'] == 'read']
+        self.assertEqual([e['external_message_id'] for e in receipts], ['101'])
+        self.driver.record_read(20, 9999999999999 - 1000)
+        self.assertEqual(self.journal.get('read_mark/20'), 9999999999999)
+
+    async def test_read_poll_fetches_fresh_peer_mark_instead_of_cached_chat(self):
+        from pymax.protocol import Opcode
+        self.client._app.invoke.return_value = NS(payload={'chats': [
+            {'id': 30, 'type': 'DIALOG', 'status': 'ACTIVE', 'owner': 10, 'participants': {'10': 9999, '20': 2000}}
+        ]})
+        self.assertEqual(await sdk.read_mark(self.client, 30, 20), 2000)
+        self.client._app.invoke.assert_awaited_once_with(Opcode.CHAT_INFO, {'chatIds': [30]})
+        self.client.get_chat.assert_not_awaited()
+
+    async def test_own_echo_keeps_the_timestamp_needed_for_read_receipts(self):
+        cid, _ = self.journal.begin(self.operation)
+        self.journal.finish(self.operation['operation_id'], 'sent', external_message_id='101', external_message_time=9999999999999)
+        await self.driver.capture(message(sender=10, id=101, cid=cid, time=9999999999999))
+        self.assertEqual(self.journal.operation(self.operation['operation_id'])['external_message_time'], 9999999999999)
+        self.driver.record_read(20, 9999999999999)
+        receipts = [e for e in self.journal.events() if e['event_type'] == 'read']
+        self.assertEqual(receipts[0]['read_message_ids'], ['101'])
 
     async def test_receive_is_durable_and_replay_is_suppressed(self):
         await self.driver.capture(message())
@@ -172,6 +202,7 @@ class DeliveryTests(unittest.IsolatedAsyncioTestCase):
         self.client.on_message = router.on_message
         self.client.on_message_edit = router.on_message_edit
         self.client.on_message_delete = router.on_message_delete
+        self.client.on_message_read = router.on_message_read
         self.driver.register(self.client)
         dispatcher = Dispatcher(NS(), router)
         dispatcher.bind_client(self.client)

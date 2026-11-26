@@ -42,13 +42,15 @@ class Corporate::IncomingMessage
     attach_files(message)
     ensure_visible_error(message)
     message.save!
+    Corporate::ReadReceipts.apply(message) if message.outgoing?
     message
   end
 
   def event_attributes
     { corporate_revision: @event[:event_type] == 'media' ? @event[:source_revision] : @event[:revision],
       corporate_media_state: @event[:attachment_state], corporate_media_error: @event[:attachment_error],
-      corporate_media_id: @event[:media_id] }.compact.merge(corporate_media_error: @event[:attachment_error])
+      corporate_media_id: @event[:media_id], corporate_custom_emojis: Corporate::TelegramEmoji.entities(@event) }
+      .compact.merge(corporate_media_error: @event[:attachment_error])
   end
 
   def add_placeholder(message)
@@ -107,15 +109,14 @@ class Corporate::IncomingMessage
   end
 
   def attach_files(message)
-    @attachments.each do |file|
+    @attachments.each_with_index do |file, index|
       raise ArgumentError unless file.size.positive? && file.size <= Corporate::MessageSafety::MAX_BYTES
 
       unless allowed_file?(file)
         message.content_attributes = message.content_attributes.to_h.merge(corporate_media_error: 'unsupported_type', corporate_media_state: 'failed')
         next
       end
-      metadata = { scan_state: 'clean' }
-      metadata[:is_voice_message] = true if @event[:voice]
+      metadata = Corporate::TelegramEmoji.attachment_metadata(@event, index)
       message.content_attributes = message.content_attributes.to_h.merge(corporate_attached_media_id: @event[:media_id])
       message.attachments.build(account: @account, file: file, file_type: file_type(file.content_type), meta: metadata)
     end

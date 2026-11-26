@@ -200,7 +200,7 @@ class ReliabilityTests(unittest.IsolatedAsyncioTestCase):
             driver.journal.db.close()
 
     async def test_oversize_stream_is_rejected_before_growing_disk(self):
-        from tg_gateway.driver import BoundedDownload, DownloadTooLarge, MAX_BYTES
+        from tg_gateway.media import BoundedDownload, DownloadTooLarge, MAX_BYTES
         import io
         output = io.BytesIO()
         stream = BoundedDownload(output)

@@ -11,8 +11,15 @@ class CorporateDelivery < ApplicationRecord
     return update_edit_message(value, error_code) if action == 'edit'
 
     attributes = message.content_attributes.to_h.merge(corporate_delivery: value, corporate_operation_id: operation_id)
-    status = %w[failed cancelled].include?(value) ? :failed : :sent
+    status = if %w[failed cancelled].include?(value)
+               :failed
+             elsif message.read?
+               :read
+             else
+               :sent
+             end
     message.update!(content_attributes: attributes, status: status, source_id: external_id || message.source_id)
+    Corporate::ReadReceipts.apply(message) if value == 'sent'
   end
 
   private

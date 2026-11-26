@@ -51,6 +51,17 @@ class Messaging:
         async def edited(message, _client):
             await self.capture(message)
 
+        @client.on_message_read()
+        async def read(event, _client):
+            if not self.enabled or not self.manager.connected or event.set_as_unread:
+                return
+            peer = client.me.contact.id ^ event.chat_id
+            if event.user_id != peer:
+                return
+            chat = await client.get_chat(event.chat_id)
+            if chat.type == 'DIALOG':
+                self.record_read(peer, event.mark)
+
         @client.on_message_delete()
         async def deleted(event, _client):
             if not self.enabled or not self.manager.connected:
@@ -61,6 +72,32 @@ class Messaging:
                 return
             for mid in event.message_ids:
                 self.record_deletion(event.chat_id, mid)
+
+    def record_read(self, peer, mark):
+        if not self.allowed(peer) or peer == self.client.me.contact.id or mark <= 0:
+            return
+        account = self.client.me.contact.id
+        chat_id = account ^ peer
+        key = 'read_mark/' + str(peer)
+        mark = max(mark, self.journal.get(key, 0))
+        self.journal.put(key, mark)
+        known = {}
+        for row in self.journal.db.execute("SELECT id,payload FROM messages WHERE peer=? AND deleted=0", (str(chat_id),)):
+            event = json.loads(row['payload'])
+            if event.get('direction') == 'outgoing' and event.get('timestamp'):
+                known[row['id']] = int(datetime.fromisoformat(event['timestamp']).timestamp() * 1000)
+        for row in self.journal.db.execute("SELECT result FROM operations WHERE peer=? AND state='sent'", (str(peer),)):
+            result = json.loads(row['result'])
+            if result.get('external_message_time') and result.get('external_message_id'):
+                known[result['external_message_id']] = result['external_message_time']
+        read_ids = sorted(mid for mid, sent_time in known.items() if sent_time <= mark)
+        for offset in range(0, len(read_ids), 100):
+            batch = read_ids[offset:offset + 100]
+            self.journal.emit({'schema_version': 1, 'channel': 'max', 'external_account_id': str(account),
+                'external_user_id': str(peer), 'external_chat_id': str(chat_id), 'external_message_id': batch[-1],
+                'direction': 'outgoing', 'event_type': 'read', 'revision': digest(batch), 'read_message_ids': batch,
+                'text': '', 'attachments': [], 'origin': 'external'})
+        self.journal.db.commit()
 
     def record_deletion(self, chat_id, message_id):
         account = self.client.me.contact.id
@@ -127,9 +164,10 @@ class Messaging:
         if message.time < self.since:
             return
         if message.sender == client.me.contact.id:
-            if message.status != 'EDITED' and self.journal.confirm_echo(peer, message.cid, message.id):
+            if message.status != 'EDITED' and self.journal.confirm_echo(peer, message.cid, message.id, message.time):
                 return
             if self.journal.own(peer, message.id):
+                self.journal.remember_sent_time(peer, message.id, message.time)
                 # Remote caption/text changes for our own messages still update CW.
                 if message.status != 'EDITED':
                     return
@@ -171,7 +209,10 @@ class Messaging:
                 else:
                     message = await sdk.send(client, chat_id, data, cid, files)
                     mid = message.id
-                return self.journal.finish(operation_id, 'sent', external_message_id=str(mid))
+                result = self.journal.finish(operation_id, 'sent', external_message_id=str(mid),
+                    **({'external_message_time': message.time} if data.get('action', 'send') != 'edit' else {}))
+                self.record_read(peer, self.journal.get('read_mark/' + str(peer), 0))
+                return result
             except sdk.UploadBeforeSend:
                 return self.journal.finish(operation_id, 'failed', error_code='attachment_upload_failed')
             except asyncio.CancelledError:
@@ -263,6 +304,8 @@ class Messaging:
             message.chat_id = chat_id
             await self.capture(message)
 
+        mark = max(await sdk.read_mark(client, chat_id, peer), self.journal.get('read_mark/' + str(peer), 0))
+        self.record_read(peer, mark)
         return True
 
     async def diagnostics(self):

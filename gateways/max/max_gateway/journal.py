@@ -72,13 +72,20 @@ class Journal:
         self.db.commit()
         return {'state': state, **result}
 
-    def confirm_echo(self, peer, cid, message_id):
+    def confirm_echo(self, peer, cid, message_id, message_time=None):
         if cid is None:
             return False
         row = self.db.execute('SELECT id FROM operations WHERE cid=? AND peer=?', (cid, str(peer))).fetchone()
         if row:
-            self.finish(row['id'], 'sent', external_message_id=str(message_id))
+            previous = self.operation(row['id']).get('external_message_time')
+            self.finish(row['id'], 'sent', external_message_id=str(message_id),
+                        **({'external_message_time': message_time or previous} if message_time or previous else {}))
         return bool(row)
+
+    def remember_sent_time(self, peer, message_id, timestamp):
+        self.db.execute("UPDATE operations SET result=json_set(result,'$.external_message_time',?) WHERE peer=? AND json_extract(result,'$.external_message_id')=?",
+                        (timestamp, str(peer), str(message_id)))
+        self.db.commit()
 
     def own(self, peer, message_id):
         return bool(self.db.execute("SELECT 1 FROM operations WHERE peer=? AND json_extract(result,'$.external_message_id')=?", (str(peer), str(message_id))).fetchone())

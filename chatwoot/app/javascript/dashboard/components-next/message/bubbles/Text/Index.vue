@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { usePreferredReducedMotion } from '@vueuse/core';
 import { useMapGetter } from 'dashboard/composables/store';
 import BaseBubble from 'next/message/bubbles/Base.vue';
+import CustomEmojiContent from 'dashboard/components/corporate/CustomEmojiContent.vue';
 import FormattedContent from './FormattedContent.vue';
 import AttachmentChips from 'next/message/chips/AttachmentChips.vue';
 import TranslationToggle from 'dashboard/components-next/message/TranslationToggle.vue';
@@ -110,7 +111,16 @@ const morphHeight = () => {
         >
           <div :key="renderContent">
             <div :class="{ [TEXT_SHIMMER_CLASS]: isTranslating }">
-              <FormattedContent :content="renderContent" />
+              <CustomEmojiContent
+                v-if="
+                  contentAttributes.corporateCustomEmojis?.length &&
+                  !hasTranslations
+                "
+                :content="renderContent"
+                :entities="contentAttributes.corporateCustomEmojis"
+                :attachments="attachments"
+              />
+              <FormattedContent v-else :content="renderContent" />
             </div>
             <TranslationToggle
               v-if="!isCaptainMessage"
