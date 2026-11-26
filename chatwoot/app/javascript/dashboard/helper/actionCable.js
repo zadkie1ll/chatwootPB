@@ -39,6 +39,8 @@ class ActionCableConnector extends BaseActionCableConnector {
     this.mentionUnreadCountsRetryTimer = null;
     this.filteredUnreadCountsRetryTimer = null;
     this.events = {
+      'corporate.sharing_changed': () =>
+        emitter.emit('corporate_sharing_changed'),
       'corporate.access_changed': data =>
         window.location.assign(`/app/accounts/${data.account_id}/dashboard`),
       'monitor.updated': this.onMonitorUpdated,

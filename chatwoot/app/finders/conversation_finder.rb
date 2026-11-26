@@ -22,6 +22,7 @@ class ConversationFinder
 
   def perform
     set_up
+    return corporate_result if Corporate.enabled?
 
     mine_count, unassigned_count, all_count = set_count_for_all_conversations
     assigned_count = all_count - unassigned_count
@@ -41,6 +42,7 @@ class ConversationFinder
 
   def perform_meta_only
     set_up
+    return corporate_result if Corporate.enabled?
 
     mine_count, unassigned_count, all_count, = set_count_for_all_conversations
     assigned_count = all_count - unassigned_count
@@ -56,6 +58,12 @@ class ConversationFinder
   end
 
   private
+
+  def corporate_result
+    counts = Corporate::ConversationTabs.new(@conversations, current_user, account: current_account).counts
+    filter_by_assignee_type
+    { conversations: conversations, count: counts }
+  end
 
   def set_up
     set_inboxes
@@ -112,6 +120,8 @@ class ConversationFinder
       @conversations = @conversations.assigned_to(current_user)
     when 'unassigned'
       @conversations = @conversations.unassigned
+    when 'shared'
+      @conversations = @conversations.where(id: Corporate::Visibility.shared_conversations(current_account).select(:id)) if Corporate.enabled?
     when 'assigned'
       @conversations = @conversations.assigned
     end
@@ -198,6 +208,7 @@ class ConversationFinder
 
   def conversations
     @conversations = conversations_base_query
+    @conversations = @conversations.preload(:corporate_conversation_share, contact: :customer_ownership) if Corporate.enabled?
     @conversations = Conversations::SortService.apply(@conversations, params[:sort_by])
 
     if params[:updated_within].present?

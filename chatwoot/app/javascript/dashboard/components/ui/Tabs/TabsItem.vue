@@ -18,6 +18,8 @@ const props = defineProps({
     type: Number,
     default: 0,
   },
+  unreadCount: { type: Number, default: 0 },
+  unreadLabel: { type: String, default: '' },
   showBadge: {
     type: Boolean,
     default: true,
@@ -70,6 +72,13 @@ const onTabClick = event => {
           {{ getItemCount }}
         </span>
       </div>
+      <span
+        v-if="unreadCount > 0"
+        :title="unreadLabel"
+        :aria-label="unreadLabel"
+        class="ms-1 rounded-full px-1.5 bg-n-blue-9 text-white text-xs"
+        >{{ unreadCount }}</span
+      >
     </a>
   </li>
 </template>

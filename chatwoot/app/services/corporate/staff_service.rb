@@ -22,11 +22,13 @@ class Corporate::StaffService
     @account.with_lock do
       membership = CorporateMembership.find_by!(account: @account, user_id: user_id, role: 'manager')
       old_stream = Corporate.stream(@account.id, membership.user_id)
-      membership.update!(active: false)
+      was_absent = membership.chats_shared_while_absent?
+      membership.update!(active: false, chats_shared_while_absent: false)
       membership.user.update!(tokens: {}, pubsub_token: SecureRandom.base58(24))
       membership.user.access_token&.regenerate_token
       ActiveRecord.after_all_transactions_commit do
         ActionCable.server.broadcast(old_stream, { event: 'corporate.access_changed', data: { account_id: @account.id } })
+        Corporate::SharingChangedJob.perform_later(@account.id, true) if was_absent
         Corporate::DisabledStaffCleanupJob.perform_later(@account.id, membership.user_id, @actor.id)
       end
       membership

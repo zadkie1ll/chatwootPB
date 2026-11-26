@@ -6,6 +6,11 @@ const state = {
   mineCount: 0,
   unAssignedCount: 0,
   allCount: 0,
+  sharedCount: 0,
+  mineUnreadCount: 0,
+  unAssignedUnreadCount: 0,
+  allUnreadCount: 0,
+  sharedUnreadCount: 0,
 };
 
 export const getters = {
@@ -85,6 +90,14 @@ export const getMetaDebounceKey = allCount => {
 };
 
 export const actions = {
+  getFresh({ commit }) {
+    if (!activeView.key) return undefined;
+    requestId += 1;
+    return fetchMetaData(commit, activeView.params, {
+      view: activeView,
+      id: requestId,
+    });
+  },
   get: ({ commit, state: $state }, params = activeView.params) => {
     if (getViewKey(params) !== activeView.key) return;
 
@@ -114,11 +127,23 @@ export const mutations = {
       mine_count: mineCount,
       unassigned_count: unAssignedCount,
       all_count: allCount,
+      shared_count: sharedCount = 0,
+      mine_unread_count: mineUnreadCount = 0,
+      unassigned_unread_count: unAssignedUnreadCount = 0,
+      all_unread_count: allUnreadCount = 0,
+      shared_unread_count: sharedUnreadCount = 0,
     } = {}
   ) {
     $state.mineCount = mineCount;
     $state.allCount = allCount;
     $state.unAssignedCount = unAssignedCount;
+    Object.assign($state, {
+      sharedCount,
+      mineUnreadCount,
+      unAssignedUnreadCount,
+      allUnreadCount,
+      sharedUnreadCount,
+    });
     $state.updatedOn = new Date();
   },
 };

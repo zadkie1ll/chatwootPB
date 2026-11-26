@@ -183,6 +183,10 @@ const onDeleteConversation = () => {
   <ConversationCardExpanded
     v-if="showExpanded"
     :chat="source"
+    :class="{
+      '!bg-n-blue-2 border-s-2 border-n-blue-7':
+        source.corporate_sharing?.absence,
+    }"
     :current-contact="currentContact"
     :assignee="assignee"
     :inbox="inbox"
@@ -201,6 +205,10 @@ const onDeleteConversation = () => {
   <ConversationCard
     v-else
     :chat="source"
+    :class="{
+      '!bg-n-blue-2 border-s-2 border-n-blue-7':
+        source.corporate_sharing?.absence,
+    }"
     :current-contact="currentContact"
     :assignee="assignee"
     :inbox="inbox"

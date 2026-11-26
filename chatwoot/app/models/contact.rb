@@ -42,6 +42,7 @@
 # rubocop:enable Layout/LineLength
 
 class Contact < ApplicationRecord
+  has_one :customer_ownership, dependent: :destroy
   include Avatarable
   include AvailabilityStatusable
   include Labelable

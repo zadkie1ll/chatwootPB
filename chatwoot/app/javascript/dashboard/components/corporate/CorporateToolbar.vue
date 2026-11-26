@@ -8,6 +8,7 @@ import {
   corporateCrmEnabled,
 } from 'dashboard/composables/useCorporate';
 import { useI18n } from 'vue-i18n';
+import SharingControls from './SharingControls.vue';
 import MaxSetup from './MaxSetup.vue';
 import TelegramSetup from './TelegramSetup.vue';
 import StaffManagement from './StaffManagement.vue';
@@ -197,6 +198,7 @@ const loadAudit = async delta => {
     <span v-if="gatewayMode === 'mock'" class="ms-3 text-xs text-n-slate-11">{{
       t('CORPORATE.TEST_MODE')
     }}</span>
+    <SharingControls v-if="role === 'manager'" :account-id="accountId" />
     <PipelineHealth v-if="isSupervisor" :account-id="accountId" compact />
     <section
       v-if="opened"

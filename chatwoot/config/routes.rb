@@ -212,6 +212,12 @@ Rails.application.routes.draw do
             resource :twilio_channel, only: [:create]
           end
           namespace :corporate do
+          resource :sharing, only: [:show], controller: 'sharing' do
+            patch :absence
+            get 'conversations/:id', action: :conversation
+            patch 'conversations/:id', action: :update
+          end
+
             resource :max_channel, only: [:show], controller: :max_channel do
               post :connect
             end

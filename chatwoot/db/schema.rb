@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_25_075033) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_26_104240) do
   # These extensions should be enabled to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -1211,6 +1211,28 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_25_075033) do
     t.index ["status"], name: "index_copilot_tool_calls_running", where: "((status)::text = 'running'::text)"
   end
 
+  create_table "corporate_conversation_shares", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "shared_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "conversation_id"], name: "corporate_share_identity", unique: true
+    t.index ["account_id"], name: "index_corporate_conversation_shares_on_account_id"
+  end
+
+  create_table "corporate_conversation_views", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "user_id", null: false
+    t.datetime "last_seen_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id", "conversation_id"], name: "corporate_view_identity", unique: true
+    t.index ["account_id"], name: "index_corporate_conversation_views_on_account_id"
+    t.index ["conversation_id"], name: "index_corporate_conversation_views_on_conversation_id"
+  end
+
   create_table "corporate_crm_employees", force: :cascade do |t|
     t.integer "account_id", null: false
     t.integer "user_id", null: false
@@ -1293,9 +1315,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_25_075033) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "chats_shared_while_absent", default: false, null: false
     t.index ["account_id", "user_id"], name: "index_corporate_memberships_on_account_id_and_user_id", unique: true
     t.index ["account_id"], name: "index_corporate_memberships_on_account_id"
     t.index ["user_id"], name: "index_corporate_memberships_on_user_id"
+  end
+
+  create_table "corporate_sharing_audits", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "actor_id"
+    t.bigint "conversation_id"
+    t.bigint "subject_user_id"
+    t.string "action", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_corporate_sharing_audits_on_account_id"
   end
 
   create_table "csat_survey_responses", force: :cascade do |t|

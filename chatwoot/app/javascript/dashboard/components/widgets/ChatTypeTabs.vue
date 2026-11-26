@@ -1,4 +1,5 @@
 <script setup>
+import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import wootConstants from 'dashboard/constants/globals';
@@ -15,7 +16,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['chatTabChange']);
-
+const { t } = useI18n();
 const activeTabIndex = computed(() => {
   return props.items.findIndex(item => item.key === props.activeTab);
 });
@@ -48,7 +49,7 @@ useKeyboardEvents(keyboardEvents);
 <template>
   <woot-tabs
     :index="activeTabIndex"
-    class="w-full px-3 -mt-1 py-0 [&_ul]:p-0 h-10"
+    class="w-full px-3 -mt-1 py-0 [&_ul]:p-0 [&_ul]:flex-wrap min-h-10"
     @change="onTabChange"
   >
     <woot-tabs-item
@@ -58,6 +59,10 @@ useKeyboardEvents(keyboardEvents);
       :index="index"
       :name="item.name"
       :count="item.count"
+      :unread-count="item.unreadCount || 0"
+      :unread-label="
+        t('CORPORATE.SHARING.UNREAD', { count: item.unreadCount || 0 })
+      "
       is-compact
     />
   </woot-tabs>

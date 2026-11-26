@@ -9,6 +9,10 @@ class Conversations::FilterService < FilterService
   def perform
     validate_query_operator
     @conversations = query_builder(@filters['conversations'])
+    if Corporate.enabled?
+      counts = Corporate::ConversationTabs.new(@conversations, @user, account: @account).counts
+      return { conversations: conversations, count: counts }
+    end
     mine_count, unassigned_count, all_count, = set_count_for_all_conversations
     assigned_count = all_count - unassigned_count
 
@@ -54,7 +58,8 @@ class Conversations::FilterService < FilterService
   end
 
   def conversations
-    Conversations::SortService.apply(@conversations, @params[:sort_by]).page(current_page)
+    result = Conversations::SortService.apply(@conversations, @params[:sort_by]).page(current_page)
+    Corporate.enabled? ? result.preload(:corporate_conversation_share, contact: :customer_ownership) : result
   end
 
   private

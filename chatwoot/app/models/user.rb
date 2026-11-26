@@ -46,6 +46,10 @@
 #
 
 class User < ApplicationRecord
+  has_many :corporate_conversation_views, dependent: :delete_all
+  has_many :created_corporate_shares, class_name: 'CorporateConversationShare', foreign_key: :shared_by_id, dependent: :nullify
+  has_many :corporate_sharing_actions, class_name: 'CorporateSharingAudit', foreign_key: :actor_id, dependent: :nullify
+  has_many :corporate_absence_actions, class_name: 'CorporateSharingAudit', foreign_key: :subject_user_id, dependent: :nullify
   include AccessTokenable
   include Avatarable
   # Include default devise modules.

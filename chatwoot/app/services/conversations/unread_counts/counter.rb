@@ -35,10 +35,7 @@ class Conversations::UnreadCounts::Counter
 
   def corporate_counts
     conversations = Corporate.conversations(account, user).where(status: :open)
-    messages = Message.arel_table
-    seen = Conversation.arel_table[:agent_last_seen_at]
-    unread = conversations.joins(:messages).where(messages: { message_type: :incoming })
-                          .where(seen.eq(nil).or(messages[:created_at].gt(seen))).distinct
+    unread = Corporate::PersonalReads.unread_rows(conversations, user).distinct
     { all_count: unread.count, inboxes: unread.group(:inbox_id).count, labels: {}, teams: unread.group(:team_id).count.compact }
   end
 

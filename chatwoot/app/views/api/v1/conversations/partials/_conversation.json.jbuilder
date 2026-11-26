@@ -49,8 +49,10 @@ end
 json.account_id conversation.account_id
 json.uuid conversation.uuid
 json.additional_attributes conversation.additional_attributes
-json.agent_last_seen_at conversation.agent_last_seen_at.to_i
-json.assignee_last_seen_at conversation.assignee_last_seen_at.to_i
+json.corporate_sharing Corporate::SharingState.for(conversation, Current.user) if Corporate.enabled?
+seen_at = Corporate.enabled? ? Corporate::PersonalReads.timestamp(conversation) : conversation.agent_last_seen_at
+json.agent_last_seen_at seen_at.to_i
+json.assignee_last_seen_at (Corporate.enabled? ? seen_at : conversation.assignee_last_seen_at).to_i
 json.can_reply conversation.can_reply?
 json.anonymous_caller conversation.contact_inbox.anonymous_caller?
 json.contact_last_seen_at conversation.contact_last_seen_at.to_i
@@ -64,7 +66,7 @@ json.created_at conversation.created_at.to_i
 json.updated_at conversation.updated_at.to_f
 json.timestamp conversation.last_activity_at.to_i
 json.first_reply_created_at conversation.first_reply_created_at.to_i
-json.unread_count conversation.unread_incoming_messages.count
+json.unread_count Corporate.enabled? ? Corporate::PersonalReads.count(conversation) : conversation.unread_incoming_messages.count
 json.last_non_activity_message conversation.messages.where(account_id: conversation.account_id).non_activity_messages.first.try(:push_event_data)
 json.last_activity_at conversation.last_activity_at.to_i
 json.priority conversation.priority

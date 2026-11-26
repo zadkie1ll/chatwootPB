@@ -56,6 +56,9 @@
 #
 
 class Conversation < ApplicationRecord
+  has_one :corporate_conversation_share, dependent: :destroy
+  has_many :corporate_conversation_views, dependent: :delete_all
+  has_many :corporate_sharing_audits, dependent: :nullify
   include Labelable
   include LlmFormattable
   include AssignmentHandler
@@ -199,10 +202,13 @@ class Conversation < ApplicationRecord
   end
 
   def unread_messages
-    agent_last_seen_at.present? ? messages.created_since(agent_last_seen_at) : messages
+    seen = Corporate.enabled? ? Corporate::PersonalReads.timestamp(self) : agent_last_seen_at
+    seen.present? ? messages.created_since(seen) : messages
   end
 
   def assignee_unread_messages
+    return unread_messages if Corporate.enabled?
+
     assignee_last_seen_at.present? ? messages.created_since(assignee_last_seen_at) : messages
   end
 

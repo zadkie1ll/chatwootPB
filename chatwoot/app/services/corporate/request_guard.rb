@@ -18,7 +18,8 @@ class Corporate::RequestGuard
     'corporate/summaries' => %w[create],
     'corporate/messages' => %w[update],
     'corporate/conversations' => %w[create],
-    'corporate/ownerships' => %w[index update audit]
+    'corporate/ownerships' => %w[index update audit],
+    'corporate/sharing' => %w[show conversation update absence]
   }.freeze
   SHARED_READS = %w[agents assignable_agents teams canned_responses custom_attribute_definitions custom_filters].freeze
 

@@ -1,7 +1,7 @@
 ENV['RAILS_ENV'] = 'test'
 require 'spec_helper'
 require File.expand_path('../config/environment', __dir__)
-abort 'Corporate specs require an isolated database' unless ActiveRecord::Base.connection_db_config.database == 'chatwoot_spec'
+abort 'Corporate specs require an isolated database' unless ActiveRecord::Base.connection_db_config.database.match?(/\Achatwoot(?:_[a-z0-9]+)*_spec\z/)
 require 'rspec/rails'
 require 'sidekiq/testing'
 Sidekiq::Testing.fake!

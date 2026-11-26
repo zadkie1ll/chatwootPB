@@ -25,18 +25,22 @@ class Corporate::BroadcastJob < ApplicationJob
       resource = resource_for(account, event_name, data)
       return unless resource
 
-      recipients(account, resource).each do |user|
-        next unless Corporate.can_read?(account, user, resource)
-
-        Corporate.with_user(account, user) do
-          payload = payload_for(event_name, resource, data)
-          ActionCable.server.broadcast(Corporate.stream(account.id, user.id), { event: event_name, data: payload.merge(account_id: account.id) })
-        end
-      end
+      publish_resource(account, resource, event_name, data)
     end
   end
 
   private
+
+  def publish_resource(account, resource, event_name, data)
+    recipients(account, resource).each do |user|
+      next unless Corporate.can_read?(account, user, resource)
+
+      Corporate.with_user(account, user) do
+        payload = payload_for(event_name, resource, data)
+        ActionCable.server.broadcast(Corporate.stream(account.id, user.id), { event: event_name, data: payload.merge(account_id: account.id) })
+      end
+    end
+  end
 
   def publish_notification(account, event_name, data)
     notification = account.notifications.find_by(id: data.dig(:notification, :id))
@@ -60,18 +64,26 @@ class Corporate::BroadcastJob < ApplicationJob
   end
 
   def recipients(account, resource)
-    contact_id = case resource
-                 when Contact then resource.id
-                 when Conversation then resource.contact_id
-                 else resource.conversation.contact_id
-                 end
-    ownership = CustomerOwnership.find_by(account_id: account.id, contact_id: contact_id)
-    owner_id = ownership&.owner_id
+    contact = if resource.is_a?(Contact)
+                resource
+              else
+                (resource.is_a?(Message) ? resource.conversation.contact : resource.contact)
+              end
+    ownership = CustomerOwnership.find_by(account: account, contact: contact)
     memberships = CorporateMembership.where(account: account, active: true)
     managers = memberships.where(role: 'manager')
-    managers = managers.where(user_id: owner_id) unless Corporate.shared_intake_enabled?(account) && ownership&.shared_unidentified?
-    ids = memberships.where(role: 'supervisor').or(managers).select(:user_id)
-    account.users.where(id: ids)
+    managers = managers.where(user_id: ownership&.owner_id) unless shared_resource?(account, resource, contact, ownership)
+    account.users.where(id: memberships.where(role: 'supervisor').or(managers).select(:user_id))
+  end
+
+  def shared_resource?(account, resource, contact, ownership)
+    return true if Corporate.shared_intake_enabled?(account) && ownership&.shared_unidentified?
+
+    shared = Corporate::Visibility.shared_conversations(account)
+    return shared.exists?(contact_id: contact.id) if resource.is_a?(Contact)
+
+    conversation = resource.is_a?(Message) ? resource.conversation : resource
+    shared.exists?(id: conversation.id)
   end
 
   def payload_for(event_name, resource, previous)

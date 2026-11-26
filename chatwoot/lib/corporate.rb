@@ -32,21 +32,11 @@ module Corporate
   end
 
   def self.contacts(account, user)
-    scope = account.contacts
-    case role(account, user)
-    when 'supervisor'
-      scope
-    when 'manager'
-      ownerships = CustomerOwnership.where(account_id: account.id, owner_id: user.id)
-      ownerships = ownerships.or(CustomerOwnership.where(account_id: account.id, shared_unidentified: true)) if shared_intake_enabled?(account)
-      scope.where(id: ownerships.select(:contact_id))
-    else
-      scope.none
-    end
+    Corporate::Visibility.new(account, user).contacts
   end
 
   def self.conversations(account, user)
-    account.conversations.where(contact_id: contacts(account, user).select(:id))
+    Corporate::Visibility.new(account, user).conversations
   end
 
   def self.can_read?(account, user, record)

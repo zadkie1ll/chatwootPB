@@ -50,7 +50,7 @@ class Corporate::OwnershipService
     validate_crm_assignment!(crm_link, owner_id, sync_crm)
     cancel_pending_deliveries!(ownership)
     old_owner_id = ownership.owner_id
-    was_shared = ownership.shared_unidentified?
+    was_shared = ownership.shared_unidentified? || Corporate::Visibility.absent_members(@account).exists?(user_id: old_owner_id)
     ownership.update!(owner_id: owner_id, assigned_at: owner_id.present? ? Time.current : nil, shared_unidentified: false)
     @account.conversations.where(contact_id: ownership.contact_id).find_each do |conversation|
       conversation.update!(assignee_id: owner_id)

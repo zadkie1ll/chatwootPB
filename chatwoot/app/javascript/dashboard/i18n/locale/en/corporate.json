@@ -156,6 +156,18 @@
       "HIDE_INBOX": "Hide inbox list",
       "RESIZE_INBOX": "Resize inbox list",
       "RESIZE_CONVERSATIONS": "Resize conversation list"
+    },
+    "SHARING": {
+      "TAB": "Shared",
+      "UNREAD": "New messages: {count}",
+      "MAKE_SHARED": "Share chat with everyone",
+      "MAKE_PRIVATE": "Stop permanent sharing",
+      "SHARED_CHAT": "Shared chat: colleagues can read and reply",
+      "ABSENCE_CHAT": "Shared while the owner is away",
+      "START_ABSENCE": "Share my chats while I am away",
+      "END_ABSENCE": "Stop absence sharing",
+      "ABSENCE_HINT": "Colleagues can read and reply to all your chats. Ownership stays unchanged.",
+      "ERROR": "Could not update sharing"
     }
   }
 }

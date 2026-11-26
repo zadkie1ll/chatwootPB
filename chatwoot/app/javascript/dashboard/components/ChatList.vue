@@ -1,4 +1,5 @@
 <script setup>
+import { useIntervalFn, useDocumentVisibility } from '@vueuse/core';
 import { ref, unref, provide, computed, watch, onMounted } from 'vue';
 import { useStore } from 'vuex';
 import { useRouter, useRoute } from 'vue-router';
@@ -180,8 +181,15 @@ const userPermissions = computed(() => {
   return getUserPermissions(currentUser.value, currentAccountId.value);
 });
 
+const corporateEnabled = Boolean(window.chatwootConfig?.corporateAccessEnabled);
+const documentVisibility = useDocumentVisibility();
+const CORPORATE_COUNTS_POLL_MS = 10000;
+useIntervalFn(() => {
+  if (corporateEnabled && documentVisibility.value === 'visible')
+    store.dispatch('conversationStats/getFresh');
+}, CORPORATE_COUNTS_POLL_MS);
 const assigneeTabItems = computed(() => {
-  return filterItemsByPermission(
+  const items = filterItemsByPermission(
     ASSIGNEE_TYPE_TAB_PERMISSIONS,
     userPermissions.value,
     item => item.permissions
@@ -189,7 +197,18 @@ const assigneeTabItems = computed(() => {
     key,
     name: t(`CHAT_LIST.ASSIGNEE_TYPE_TABS.${key}`),
     count: conversationStats.value[countKey] || 0,
+    unreadCount: corporateEnabled
+      ? conversationStats.value[countKey.replace('Count', 'UnreadCount')] || 0
+      : 0,
   }));
+  if (corporateEnabled)
+    items.push({
+      key: 'shared',
+      name: t('CORPORATE.SHARING.TAB'),
+      count: conversationStats.value.sharedCount || 0,
+      unreadCount: conversationStats.value.sharedUnreadCount || 0,
+    });
+  return items;
 });
 
 const showAssigneeInConversationCard = computed(() => {
@@ -302,6 +321,8 @@ const pageTitle = computed(() => {
 });
 
 function filterByAssigneeTab(conversations) {
+  if (activeAssigneeTab.value === 'shared')
+    return conversations.filter(c => c.corporate_sharing?.shared);
   if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.ME) {
     return conversations.filter(
       c => c.meta?.assignee?.id === currentUser.value?.id
@@ -829,6 +850,10 @@ function toggleSelectAll(check) {
   selectAllConversations(check, conversationList);
 }
 
+useEmitter('corporate_sharing_changed', () => {
+  fetchConversations();
+  store.dispatch('conversationStats/getFresh');
+});
 useEmitter('fetch_conversation_stats', () => {
   if (hasAppliedFiltersOrActiveFolders.value) return;
   store.dispatch('conversationStats/get', conversationFilters.value);

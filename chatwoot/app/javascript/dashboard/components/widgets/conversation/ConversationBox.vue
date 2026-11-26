@@ -4,6 +4,7 @@ import ConversationHeader from './ConversationHeader.vue';
 import DashboardAppFrame from '../DashboardApp/Frame.vue';
 import EmptyState from './EmptyState/EmptyState.vue';
 import MessagesView from './MessagesView.vue';
+import SharingControls from 'dashboard/components/corporate/SharingControls.vue';
 import CrmBanner from 'dashboard/components/corporate/CrmBanner.vue';
 import MessageApi from 'dashboard/api/inbox/message';
 
@@ -14,6 +15,7 @@ export default {
     EmptyState,
     MessagesView,
     CrmBanner,
+    SharingControls,
   },
   props: {
     inboxId: {
@@ -38,6 +40,9 @@ export default {
     return { activeIndex: 0, corporatePoll: null, corporateRefreshing: false };
   },
   computed: {
+    isCorporate() {
+      return window.chatwootConfig?.corporateAccessEnabled;
+    },
     ...mapGetters({
       currentChat: 'getSelectedChat',
       dashboardApps: 'dashboardApps/getRecords',
@@ -144,6 +149,11 @@ export default {
       :class="{
         'border-b border-b-n-weak !pt-2': !dashboardApps.length,
       }"
+    />
+    <SharingControls
+      v-if="currentChat.id && isCorporate"
+      :account-id="$route.params.accountId"
+      :conversation-id="currentChat.id"
     />
     <CrmBanner
       v-if="currentChat.id"

@@ -13,6 +13,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   def index
     result = conversation_finder.perform
     @conversations = result[:conversations]
+    ::Corporate::PersonalReads.preload(@conversations, Current.user) if ::Corporate.enabled?
     @conversations_count = result[:count]
   end
 
@@ -24,6 +25,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   def search
     result = conversation_finder.perform
     @conversations = result[:conversations]
+    ::Corporate::PersonalReads.preload(@conversations, Current.user) if ::Corporate.enabled?
     @conversations_count = result[:count]
   end
 
@@ -52,6 +54,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   def filter
     result = ::Conversations::FilterService.new(params.permit!, current_user, current_account).perform
     @conversations = result[:conversations]
+    ::Corporate::PersonalReads.preload(@conversations, Current.user) if ::Corporate.enabled?
     @conversations_count = result[:count]
   rescue CustomExceptions::CustomFilter::InvalidAttribute,
          CustomExceptions::CustomFilter::InvalidOperator,
@@ -111,6 +114,11 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   end
 
   def update_last_seen
+    if ::Corporate.enabled?
+      ::Corporate::PersonalReads.mark(@conversation, Current.user, at: Time.current)
+      Notification::MarkConversationReadService.new(user: Current.user, account: Current.account, conversation: @conversation).perform
+      return render :update_last_seen
+    end
     # High-traffic accounts generate excessive DB writes when agents frequently switch between conversations.
     # Throttle last_seen updates to once per hour when there are no unread messages to reduce DB load.
     # Always update immediately if there are unread messages to maintain accurate read/unread state.
@@ -128,6 +136,10 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   def unread
     last_incoming_message = @conversation.messages.incoming.last
     last_seen_at = last_incoming_message.created_at - 1.second if last_incoming_message.present?
+    if ::Corporate.enabled?
+      ::Corporate::PersonalReads.mark(@conversation, Current.user, at: last_seen_at, force: true)
+      return render :unread
+    end
     update_last_seen_on_conversation(last_seen_at, true)
   end
 
