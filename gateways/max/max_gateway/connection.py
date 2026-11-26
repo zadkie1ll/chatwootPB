@@ -46,6 +46,8 @@ def sdk_client(manager, allow_auth):
         manager.state = 'reconnecting'
         manager.qr_image = None
 
+    if manager.messaging:
+        manager.messaging.register(client)
     return client
 
 
@@ -54,6 +56,7 @@ class Connection:
         self.directory = Path(directory)
         self.directory.mkdir(parents=True, mode=0o700, exist_ok=True)
         self.factory = factory
+        self.messaging = None
         self.state = 'disconnected'
         self.error = None
         self.qr_image = None

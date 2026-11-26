@@ -7,5 +7,16 @@
   "installed_python_files_compared": 188,
   "source_mismatches": 0,
   "scope": "authentication, session storage and logging boundaries; not a full SDK audit",
-  "live_account_tested": false
+  "live_account_tested": true,
+  "live_scope": [
+    "qr_2fa",
+    "session_restore",
+    "text",
+    "edit",
+    "photo",
+    "document",
+    "voice",
+    "forwarded_media",
+    "chatwoot_permissions"
+  ]
 }

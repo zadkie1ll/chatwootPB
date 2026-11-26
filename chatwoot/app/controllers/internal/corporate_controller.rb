@@ -69,7 +69,8 @@ class Internal::CorporateController < ActionController::Base # rubocop:disable R
 
   def ingest
     event = params[:event].is_a?(String) ? JSON.parse(params[:event]) : params.require(:event).to_unsafe_h
-    result = Corporate::IngestEvent.new(account: @account, inbox: @inbox).perform(event, Array(params[:attachments]))
+    inbox = Corporate::Channels.inbox(@account, event.fetch('channel'))
+    result = Corporate::IngestEvent.new(account: @account, inbox: inbox).perform(event, Array(params[:attachments]))
     render json: { message_id: result&.id }
   rescue JSON::ParserError, KeyError, ArgumentError
     render json: { error: 'invalid_event' }, status: :unprocessable_entity
@@ -138,18 +139,18 @@ class Internal::CorporateController < ActionController::Base # rubocop:disable R
   end
 
   def deliveries
-    CorporateDelivery.where(account: @account, message_id: @inbox.messages.select(:id))
+    CorporateDelivery.where(account: @account, message_id: @account.messages.where(inbox_id: Corporate::Channels.inbox_ids).select(:id))
   end
 
   def operation_data(delivery)
     message = delivery.message
-    identity = ChannelIdentity.find_by!(account: @account, contact_id: message.conversation.contact_id, channel: 'telegram')
+    identity = Corporate::Channels.identity(message.conversation)
     {
-      action: delivery.action, target_message_id: delivery.action == 'edit' ? message.source_id : nil,
+      channel: identity.channel, action: delivery.action, target_message_id: delivery.action == 'edit' ? message.source_id : nil,
       operation_id: delivery.operation_id, state: delivery.state, dispatch_token: delivery.dispatch_token,
       assignment_version: delivery.assignment_version, message_id: message.id,
       external_account_id: identity.external_account_id, external_user_id: identity.external_user_id,
-      text: delivery.action == 'edit' ? delivery.requested_content : message.content,
+      text: delivery.action == 'edit' ? delivery.requested_content : message.content.to_s,
       reply_to: message.content_attributes['in_reply_to_external_id'], attachments: delivery_attachments(delivery)
     }
   end

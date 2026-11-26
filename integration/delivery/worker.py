@@ -27,9 +27,18 @@ def event_key(event):
 
 
 def sync_inbox():
-    for event in transport.gateway('GET', '/events').get('events', []):
-        InboxEvent.objects.get_or_create(event_key=event_key(event), defaults={'payload': event})
-        transport.gateway('POST', '/events/' + str(event['journal_id']) + '/ack')
+    failures = []
+    for channel in transport.enabled_channels():
+        try:
+            for event in transport.channel_gateway(channel, 'GET', '/events').get('events', []):
+                if event.get('channel') != channel:
+                    raise ValueError('event_channel_mismatch')
+                InboxEvent.objects.get_or_create(event_key=event_key(event), defaults={'payload': event})
+                transport.channel_gateway(channel, 'POST', '/events/' + str(event['journal_id']) + '/ack')
+        except (httpx.HTTPError, OSError, ValueError, KeyError) as error:
+            failures.append(error)
+    if failures:
+        raise failures[0]
 
 
 def ingest_one(row):
@@ -38,8 +47,9 @@ def ingest_one(row):
     import json
     try:
         for item in event.get('attachments', []):
-            response = httpx.get(os.environ['TELEGRAM_GATEWAY_URL'] + '/attachments/' + item['key'],
-                                 headers={'Authorization': 'Bearer ' + os.environ['GATEWAY_TOKEN']}, timeout=90)
+            url, token = transport.gateway_configuration(event.get('channel', 'telegram'))
+            response = httpx.get(url + '/attachments/' + item['key'],
+                                 headers={'Authorization': 'Bearer ' + token}, timeout=90)
             response.raise_for_status()
             try:
                 scan(response.content)
@@ -53,7 +63,7 @@ def ingest_one(row):
         else:
             transport.cw('POST', '/ingest', json={'event': event})
         if event.get('journal_id'):
-            transport.gateway('POST', '/events/' + str(event['journal_id']) + '/complete')
+            transport.channel_gateway(event.get('channel', 'telegram'), 'POST', '/events/' + str(event['journal_id']) + '/complete')
         row.state, row.error_code = 'processed', ''
     except (httpx.HTTPError, KeyError, ValueError, OSError):
         # Retain the durable event indefinitely on transient failure. Other
@@ -114,7 +124,7 @@ def dispatch_one(row):
         return
     operation['attachments'] = prepared
     try:
-        result = transport.gateway('POST', '/send', json=operation)
+        result = transport.channel_gateway(operation.get('channel', 'telegram'), 'POST', '/send', json=operation)
     except (httpx.HTTPError, OSError):
         row.state, row.error_code = 'unknown', 'send_outcome_unknown'
         persist(row)
@@ -155,7 +165,7 @@ def apply_result(row, result):
 
 
 def reconcile_one(row):
-    result = transport.gateway('GET', '/operations/' + str(row.operation_id))
+    result = transport.channel_gateway(row.payload.get('channel', 'telegram'), 'GET', '/operations/' + str(row.operation_id))
     if result.get('state') in ('sent', 'failed') and row.dispatch_token:
         apply_result(row, result)
     else:

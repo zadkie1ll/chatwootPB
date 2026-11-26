@@ -21,18 +21,27 @@ class Corporate::IngestEvent
 
     identity = identity_for(event)
     message = Corporate::IncomingMessage.new(account: @account, inbox: @inbox).perform(event, identity, attachments)
-    enqueue_lookup(message) if @lookup_needed && message && Corporate.crm_enabled?(@account)
+    if message
+      enqueue_lookup(message) if @lookup_needed && Corporate.crm_enabled?(@account) && Corporate::Channels.crm_enabled?(event[:channel])
+      Corporate::ChannelContact.refresh_crm(@account, message.conversation)
+    end
     CorporateInboxReceipt.create!(account: @account, event_key: key, message: message)
     message
   end
 
   def event_key(event)
     fields = %i[external_account_id external_chat_id external_message_id event_type revision]
-    Digest::SHA256.hexdigest(event.values_at(*fields).join('/'))
+    Digest::SHA256.hexdigest(scoped_values(event, fields))
+  end
+
+  def scoped_values(event, fields)
+    values = event.values_at(*fields)
+    values.unshift(event[:channel]) unless event[:channel] == 'telegram'
+    values.join('/')
   end
 
   def tombstoned?(event, key)
-    digest = Digest::SHA256.hexdigest(event.values_at(:external_account_id, :external_chat_id, :external_message_id).join('/'))
+    digest = Digest::SHA256.hexdigest(scoped_values(event, %i[external_account_id external_chat_id external_message_id]))
     tombstone = "tombstone/#{digest}"
     if event[:event_type] == 'deleted'
       CorporateInboxReceipt.find_or_create_by!(account: @account, event_key: tombstone)
@@ -44,19 +53,22 @@ class Corporate::IngestEvent
   end
 
   def identity_for(event)
-    identity = ChannelIdentity.find_by(account: @account, channel: 'telegram', external_account_id: event[:external_account_id],
+    identity = ChannelIdentity.find_by(account: @account, channel: event[:channel], external_account_id: event[:external_account_id],
                                        external_user_id: event[:external_user_id].to_s)
     return enrich_phone(identity, event) if identity
 
     contact = create_contact(event)
     @lookup_needed = event[:phone].present?
-    ChannelIdentity.create!(account: @account, contact: contact, channel: 'telegram', external_account_id: event[:external_account_id],
+    ChannelIdentity.create!(account: @account, contact: contact, channel: event[:channel], external_account_id: event[:external_account_id],
                             external_user_id: event[:external_user_id].to_s, verified_phone: event[:phone])
   end
 
   def create_contact(event)
+    existing = Corporate::ChannelContact.find(@account, event[:phone])
+    return existing if existing
+
     contact = @account.contacts.create!(name: event[:sender_name].presence || I18n.t('corporate.unknown_contact'), phone_number: event[:phone],
-                                        identifier: "telegram/#{event[:external_account_id]}/#{event[:external_user_id]}")
+                                        identifier: "#{event[:channel]}/#{event[:external_account_id]}/#{event[:external_user_id]}")
     shared = Corporate.shared_intake_enabled?(@account) && event[:direction] == 'incoming' && event[:phone].blank?
     CustomerOwnership.create!(account: @account, contact: contact, shared_unidentified: shared)
     contact

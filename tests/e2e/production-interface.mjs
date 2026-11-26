@@ -56,8 +56,8 @@ try {
         await page.getByRole('heading', { name: 'Сотрудники Битрикс24', exact: true }).waitFor();
         check('CRM employee mapping UI opens on production', true);
         await page.getByRole('button', { name: 'Клиенты и назначения', exact: true }).click();
-        await page.getByRole('button', { name: 'Новый диалог Telegram', exact: true }).click();
-        const quick = page.getByRole('dialog', { name: 'Новый диалог Telegram', exact: true });
+        await page.getByRole('button', { name: 'Новый диалог', exact: true }).click();
+        const quick = page.getByRole('dialog', { name: 'Новый диалог', exact: true });
         await quick.waitFor();
         check('Quick new Telegram dialog opens on production', true);
         await quick.getByRole('button', { name: 'Отмена', exact: true }).click();

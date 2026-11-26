@@ -18,6 +18,8 @@ x-app-environment: &app-environment
   ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ${ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT:?Required}
   CORPORATE_ACCOUNT_ID: ${CORPORATE_ACCOUNT_ID:-}
   CORPORATE_INBOX_ID: ${CORPORATE_INBOX_ID:-}
+  CORPORATE_MAX_INBOX_ID: ${CORPORATE_MAX_INBOX_ID:-}
+  MAX_CRM_ENABLED: ${MAX_CRM_ENABLED:-false}
   CW_SERVICE_TOKEN: ${CW_SERVICE_TOKEN:-}
   INTEGRATION_URL: http://integration-web:8090
   INTEGRATION_API_TOKEN: ${INTEGRATION_API_TOKEN:-}
@@ -235,6 +237,9 @@ services:
     environment:
       MAX_GATEWAY_TOKEN: ${MAX_GATEWAY_TOKEN:-}
       MAX_DATA_DIR: /data
+      MAX_DELIVERY_ENABLED: ${MAX_DELIVERY_ENABLED:-false}
+      MAX_TEST_PEER_IDS: ${MAX_TEST_PEER_IDS:-}
+      MAX_TEST_PHONE: ${MAX_TEST_PHONE:-}
     volumes:
       - ./secrets/max:/data
     networks: [lab, max-egress]
@@ -287,6 +292,7 @@ services:
       TELEGRAM_GATEWAY_URL: http://telegram-gateway:8091
       MAX_GATEWAY_URL: http://max-gateway:8092
       MAX_GATEWAY_TOKEN: ${MAX_GATEWAY_TOKEN:-}
+      MAX_DELIVERY_ENABLED: ${MAX_DELIVERY_ENABLED:-false}
       TELEGRAM_MODE: ${TELEGRAM_MODE:-personal}
       CLAMAV_HOST: clamav
       BITRIX_ENABLED: ${BITRIX_ENABLED:-false}

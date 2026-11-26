@@ -164,7 +164,10 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
     async def test_anonymous_health_has_no_authentication_material(self):
         response = await self.client.get('/health')
         data = await response.json()
-        self.assertEqual(data, {'status': 'ok', 'connected': False, 'poc_only': True})
+        self.assertEqual(data['status'], 'ok')
+        self.assertFalse(data['connected'])
+        self.assertFalse(data['delivery_enabled'])
+        self.assertNotIn('qr_image', data)
         self.assertEqual((await self.client.get('/auth/status')).status, 401)
         self.assertIsNone(self.connection.task)
 
@@ -181,9 +184,9 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await self.client.post('/auth/password', headers=self.headers,
                                                json={'attempt_id': 'stale', 'password': 'never-log-this'})).status, 409)
 
-    async def test_pilot_has_no_message_send_or_history_endpoints(self):
-        self.assertEqual((await self.client.post('/send', headers=self.headers, json={})).status, 404)
-        self.assertEqual((await self.client.get('/events', headers=self.headers)).status, 404)
+    async def test_auth_only_mode_disables_delivery_endpoints(self):
+        self.assertEqual((await self.client.post('/send', headers=self.headers, json={})).status, 503)
+        self.assertEqual((await self.client.get('/events', headers=self.headers)).status, 503)
 
 
 if __name__ == '__main__':

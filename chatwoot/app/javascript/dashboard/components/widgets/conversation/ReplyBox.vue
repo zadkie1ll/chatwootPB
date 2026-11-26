@@ -899,7 +899,13 @@ export default {
         // To handle both cases, text and attachments are always sent as separate messages.
         const isOnInstagram = this.isAnInstagramChannel;
         const isOnTiktok = this.isATiktokChannel;
-        if ((isOnWhatsApp || isOnInstagram || isOnTiktok) && !this.isPrivate) {
+        const isOnMax =
+          window.chatwootConfig?.corporateAccessEnabled &&
+          this.currentChat.additional_attributes?.corporate_channel === 'max';
+        if (
+          (isOnWhatsApp || isOnInstagram || isOnTiktok || isOnMax) &&
+          !this.isPrivate
+        ) {
           this.sendMessageAsMultipleMessages(
             this.message,
             copilotAcceptedMessage

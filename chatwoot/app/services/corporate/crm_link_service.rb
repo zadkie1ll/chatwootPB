@@ -14,6 +14,7 @@ class Corporate::CrmLinkService
       conversation.reload
       raise ActiveRecord::RecordNotFound unless Corporate.can_read?(@account, @actor, conversation)
 
+      Corporate::CrmIdentityMerge.new(account: @account, actor: @actor).perform(conversation, result)
       link = CorporateCrmLink.find_or_initialize_by(account: @account, contact: conversation.contact)
       validate_binding!(link, options[:expected_version])
       return mark_not_found(link, conversation, result, options) unless result.fetch('found')

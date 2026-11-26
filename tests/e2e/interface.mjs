@@ -19,8 +19,8 @@ try {
   await page.locator('input[type=password]').fill(password);
   await page.locator('button[type=submit]').click();
   await page.waitForURL('**/app/accounts/**');
-  await page.getByRole('button', { name: 'Новый диалог Telegram', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Новый диалог Telegram', exact: true });
+  await page.getByRole('button', { name: 'Новый диалог', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Новый диалог', exact: true });
   await expect(dialog).toBeVisible();
   check('Plus button opens the quick new-chat dialog', true);
   await dialog.getByRole('textbox').fill('+7999' + Date.now().toString().slice(-7));

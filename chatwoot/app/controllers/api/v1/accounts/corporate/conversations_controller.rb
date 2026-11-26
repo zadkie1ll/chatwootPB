@@ -1,9 +1,9 @@
 class Api::V1::Accounts::Corporate::ConversationsController < Api::V1::Accounts::BaseController
   def create
-    raise ActionController::BadRequest unless params[:channel] == 'telegram'
+    raise ActionController::BadRequest unless ::Corporate::Channels::SUPPORTED.include?(params[:channel])
 
     phone = params.require(:phone).to_s.gsub(/[ ()-]/, '')
-    conversation = ::Corporate::StartConversation.new(account: Current.account, actor: Current.user).perform(phone)
+    conversation = ::Corporate::StartConversation.new(account: Current.account, actor: Current.user).perform(phone, channel: params[:channel])
     render json: { conversation_id: conversation.display_id }
   rescue ::Corporate::CrmClient::Error
     render json: { error: I18n.t('corporate.crm_employee_not_mapped') }, status: :unprocessable_entity

@@ -34,7 +34,7 @@ class Corporate::SharedIntakeBackfill
   end
 
   def unknown_contacts
-    identities = ChannelIdentity.where(account: @account, channel: 'telegram', verified_phone: [nil, '']).select(:contact_id)
+    identities = ChannelIdentity.where(account: @account, channel: Corporate::Channels::SUPPORTED, verified_phone: [nil, '']).select(:contact_id)
     @account.contacts.where(phone_number: [nil, ''], id: identities).select(:id)
   end
 

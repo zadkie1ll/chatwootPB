@@ -15,6 +15,7 @@ const enabled = computed(
 );
 const opened = ref(false);
 const phone = ref('');
+const channel = ref('telegram');
 const input = ref(null);
 const busy = ref(false);
 const error = ref('');
@@ -40,7 +41,7 @@ const start = async () => {
   try {
     const { data } = await axios.post(
       `/api/v1/accounts/${accountId}/corporate/conversations`,
-      { phone: `+${digits}`, channel: 'telegram' }
+      { phone: `+${digits}`, channel: channel.value }
     );
     if (String(route.params.accountId) !== String(accountId)) return;
     opened.value = false;
@@ -80,6 +81,20 @@ const start = async () => {
       >
         <h2 class="mb-4 text-lg font-medium">{{ t('CORPORATE.NEW_CHAT') }}</h2>
         <form class="flex flex-col gap-4" @submit.prevent="start">
+          <label class="flex flex-col gap-2">
+            {{ t('CORPORATE.CHANNEL') }}
+            <select
+              v-model="channel"
+              class="rounded-lg border border-n-weak bg-n-background px-3 py-2"
+            >
+              <option value="telegram">
+                {{ t('CORPORATE.CHANNEL_NAMES.TELEGRAM') }}
+              </option>
+              <option value="max">
+                {{ t('CORPORATE.CHANNEL_NAMES.MAX') }}
+              </option>
+            </select>
+          </label>
           <label class="flex flex-col gap-2">
             {{ t('CORPORATE.CLIENT_PHONE') }}
             <input

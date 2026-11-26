@@ -28,10 +28,10 @@ try {
     const max = await fetch(base + '/api/v1/accounts/1/corporate/max_channel', { headers: auth });
     if (role === 'technical_admin') {
       const state = await max.json();
-      check('Technical admin can read private MAX pilot readiness', max.status === 200 && state.poc_only && state.messages_forwarded === false);
+      check('Technical admin can read private MAX pilot readiness', max.status === 200 && state.connected && !state.poc_only && state.messages_forwarded === true);
       check('MAX authentication responses cannot be cached', max.headers.get('cache-control')?.includes('no-store'));
       await page.getByRole('button', { name: 'Каналы', exact: true }).click();
-      await page.getByRole('heading', { name: 'Подключение личного MAX — тест', exact: true }).waitFor();
+      await page.getByRole('heading', { name: 'Подключение личного MAX', exact: true }).waitFor();
       check('MAX connection screen is available on the real site', true);
       const tg = await fetch(base + '/api/v1/accounts/1/corporate/channel', { headers: auth });
       check('Existing Telegram session remains connected', tg.status === 200 && (await tg.json()).status === 'connected');

@@ -15,7 +15,7 @@ from .models import WebhookReceipt
 
 class ResolveRequest(serializers.Serializer):
     phone = serializers.RegexField(r'^\+[1-9]\d{6,14}$')
-    channel = serializers.ChoiceField(choices=['telegram'])
+    channel = serializers.ChoiceField(choices=['telegram', 'max'])
 
 
 @api_view(['GET', 'POST'])
@@ -44,8 +44,10 @@ def resolve(request):
     data = ResolveRequest(data=request.data)
     data.is_valid(raise_exception=True)
     try:
-        response = httpx.post(os.environ['TELEGRAM_GATEWAY_URL'] + '/resolve', json=data.validated_data,
-                              headers={'Authorization': 'Bearer ' + os.environ['GATEWAY_TOKEN']}, timeout=12)
+        from .transport import gateway_configuration
+        url, token = gateway_configuration(data.validated_data['channel'])
+        response = httpx.post(url + '/resolve', json=data.validated_data,
+                              headers={'Authorization': 'Bearer ' + token}, timeout=12)
         if response.status_code >= 500:
             return Response({'error': 'channel_unavailable'}, status=503)
         if response.status_code != 200:
@@ -104,7 +106,14 @@ def diagnostics(request):
     media = gateway.get('queues', {})
     incoming['count'] += media.get('media_pending', 0)
     incoming['oldest_seconds'] = max(incoming['oldest_seconds'], media.get('media_oldest_seconds', 0))
-    return Response({'workers': workers, 'incoming': incoming, 'outgoing': describe(outbound), 'telegram': gateway})
+    maximum = {}
+    if os.environ.get('MAX_DELIVERY_ENABLED') == 'true':
+        from .transport import channel_gateway
+        try:
+            maximum = channel_gateway('max', 'GET', '/health')
+        except (httpx.HTTPError, ValueError, OSError):
+            maximum = {'connected': False}
+    return Response({'workers': workers, 'incoming': incoming, 'outgoing': describe(outbound), 'telegram': gateway, 'max': maximum})
 
 
 def transport_gateway_health():

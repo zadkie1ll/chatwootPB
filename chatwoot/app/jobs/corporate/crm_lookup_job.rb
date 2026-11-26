@@ -13,7 +13,7 @@ class Corporate::CrmLookupJob < ApplicationJob
     ownership = CustomerOwnership.find_by!(account: account, contact_id: conversation.contact_id)
     return unless ownership.lock_version == assignment_version && Corporate.can_read?(account, actor, conversation)
 
-    phone = ChannelIdentity.find_by!(account: account, contact_id: conversation.contact_id, channel: 'telegram').verified_phone
+    phone = Corporate::Channels.identity(conversation).verified_phone
     return if phone.blank?
 
     Corporate::CrmLinkService.new(account: account, actor: actor).bind(

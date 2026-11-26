@@ -36,7 +36,7 @@ try {
   await page.locator('button[type=submit]').click();
   await page.waitForURL('**/app/accounts/**');
   await page.getByRole('button', { name: 'Каналы', exact: true }).click();
-  const panel = page.getByRole('region', { name: 'Подключение личного MAX — тест', exact: true });
+  const panel = page.getByRole('region', { name: 'Подключение личного MAX', exact: true });
   await expect(panel).toBeVisible();
   check('Technical admin sees a separate MAX pilot section', true);
   await panel.getByRole('button', { name: 'Показать QR для MAX', exact: true }).click();
@@ -53,7 +53,7 @@ try {
   await expect(panel.getByText('MAX подключён', { exact: true })).toBeVisible();
   check('2FA submits in POST body with its current login attempt', passwordReceived);
   check('QR and password input disappear after authentication', await panel.locator('input[type=password]').count() === 0 && await panel.getByRole('img').count() === 0);
-  await panel.getByRole('button', { name: 'Остановить тестовый MAX', exact: true }).click();
+  await panel.getByRole('button', { name: 'Отключить MAX', exact: true }).click();
   await expect(panel.getByRole('button', { name: 'Показать QR для MAX', exact: true })).toBeVisible();
   check('Operator can stop the pilot connection', true);
   const denied = await fetch(`http://localhost:8080/api/v1/accounts/${fixture.account_id}/corporate/max_channel`, { headers: { Authorization: `Bearer ${fixture.users.A.token}` } });

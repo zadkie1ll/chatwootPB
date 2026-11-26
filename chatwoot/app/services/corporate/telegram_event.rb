@@ -4,8 +4,15 @@ class Corporate::TelegramEvent
   end
 
   def self.valid_identity?(event)
-    event[:channel] == 'telegram' && event[:external_user_id].to_s.match?(/\A\d{1,30}\z/) &&
-      event[:external_chat_id].to_s == event[:external_user_id].to_s && event[:external_account_id].to_s.length.between?(1, 100)
+    Corporate::Channels::SUPPORTED.include?(event[:channel]) && event[:external_user_id].to_s.match?(/\A\d{1,30}\z/) &&
+      valid_chat?(event) && event[:external_account_id].to_s.length.between?(1, 100)
+  end
+
+  def self.valid_chat?(event)
+    return event[:external_chat_id].to_s == event[:external_user_id].to_s if event[:channel] == 'telegram'
+
+    event[:external_account_id].to_s.match?(/\A\d{1,30}\z/) &&
+      event[:external_chat_id].to_s == (event[:external_account_id].to_i ^ event[:external_user_id].to_i).to_s
   end
 
   def self.valid_message?(event)

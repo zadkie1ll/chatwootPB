@@ -1,5 +1,6 @@
 en:
   corporate:
+    max_file_count: "MAX sends each attachment as a separate message. Send files one at a time."
     channel_unavailable: "The channel is temporarily unavailable."
     recipient_unavailable: "Unable to start a conversation with this number."
     dispatch_in_progress: "An in-flight or unknown delivery must be reconciled before transfer."

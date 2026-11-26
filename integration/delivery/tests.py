@@ -144,3 +144,38 @@ class MaxPilotRelayTests(TestCase):
             self.assertEqual(self.client.post('/max-channel/send/', {}, format='json').status_code, 404)
             self.assertEqual(self.client.post('/max-channel/start/', {'token': 'not-accepted'}, format='json').status_code, 422)
             call.assert_not_called()
+
+
+class MultiChannelDeliveryTests(TestCase):
+    def test_max_failure_does_not_prevent_durable_telegram_ingress(self):
+        import httpx
+        event = dict(channel='telegram', journal_id=1, external_account_id='1', external_chat_id='2', external_message_id='3', event_type='received')
+        def exchange(channel, method, path, **kwargs):
+            if channel == 'max':
+                raise httpx.ConnectError('synthetic MAX outage')
+            return {'events': [event]} if method == 'GET' else {}
+        with patch('delivery.transport.enabled_channels', return_value=['max', 'telegram']), patch('delivery.transport.channel_gateway', side_effect=exchange):
+            with self.assertRaises(httpx.ConnectError):
+                worker.sync_inbox()
+        self.assertEqual(InboxEvent.objects.get().payload['channel'], 'telegram')
+
+    def test_max_event_is_persisted_before_ack_and_channel_checked(self):
+        event = dict(channel='max', journal_id=9, external_account_id='1', external_chat_id='3', external_message_id='4', event_type='received')
+        def exchange(channel, method, path, **kwargs):
+            if method == 'POST':
+                self.assertTrue(InboxEvent.objects.filter(payload__channel='max').exists())
+            return {'events': [event]} if method == 'GET' else {}
+        with patch('delivery.transport.enabled_channels', return_value=['max']), patch('delivery.transport.channel_gateway', side_effect=exchange):
+            worker.sync_inbox()
+        self.assertEqual(InboxEvent.objects.count(), 1)
+
+    def test_max_unknown_outcome_uses_max_reconciliation_without_send(self):
+        row = DeliveryRecord.objects.create(payload={'channel': 'max'}, state='unknown', dispatch_token='b' * 64)
+        with patch('delivery.transport.channel_gateway', return_value={'state': 'unknown'}) as gateway, patch('delivery.transport.cw') as cw:
+            worker.reconcile_one(row)
+        gateway.assert_called_once_with('max', 'GET', '/operations/' + str(row.operation_id))
+        cw.assert_not_called()
+
+    def test_event_keys_do_not_collide_across_channels(self):
+        event = dict(channel='telegram', external_account_id='1', external_chat_id='2', external_message_id='3', event_type='received')
+        self.assertNotEqual(worker.event_key(event), worker.event_key({**event, 'channel': 'max'}))

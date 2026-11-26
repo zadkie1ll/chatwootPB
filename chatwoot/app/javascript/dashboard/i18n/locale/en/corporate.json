@@ -7,7 +7,7 @@
     "ERROR": "Unable to complete this action. Refresh and try again.",
     "REASON_REQUIRED": "Enter the transfer reason.",
     "TRANSFERRED": "Client assignment updated.",
-    "NEW_CHAT": "New Telegram conversation",
+    "NEW_CHAT": "New conversation",
     "START": "Start",
     "REASON": "Assignment reason",
     "UNASSIGNED": "Unassigned",
@@ -123,14 +123,14 @@
     "RETRY": "Try again",
     "CANCEL": "Cancel",
     "MAX": {
-      "TITLE": "Connect personal MAX — test",
-      "PILOT": "Use the test account. This step checks login and session persistence; messages are not yet forwarded to managers, CRM or AI.",
+      "TITLE": "Connect a personal MAX account",
+      "PILOT": "Personal MAX account. Connected conversations are available to managers according to customer assignment.",
       "SCAN": "Open MAX on your phone → Profile → Devices → Scan the QR code. Keep this screen private.",
       "QR_ALT": "Private MAX sign-in QR code",
       "PASSWORD": "MAX additional protection password",
       "ERROR": "Unable to complete MAX sign-in. Check confirmation on your phone and try again.",
       "START": "Show MAX QR code",
-      "STOP": "Stop test MAX connection",
+      "STOP": "Disconnect MAX",
       "STATUS": {
         "LOADING": "Loading…",
         "DISCONNECTED": "Not connected",
@@ -143,6 +143,11 @@
         "ERROR": "MAX sign-in did not complete",
         "UNAVAILABLE": "MAX test gateway unavailable"
       }
+    },
+    "CHANNEL": "Messenger",
+    "CHANNEL_NAMES": {
+      "TELEGRAM": "Telegram",
+      "MAX": "MAX"
     }
   }
 }

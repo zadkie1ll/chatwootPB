@@ -36,7 +36,7 @@ class Corporate::CrmInboundLookupJob < ApplicationJob
       link = CorporateCrmLink.new(account: account, contact: conversation.contact, conversation: conversation,
                                   actor: mapping.user, external_deal_id: result.fetch('deal_id'),
                                   entity_type: result.fetch('entity_type', 'deal'), deal_title: result.fetch('title'),
-                                  deal_url: result.fetch('deal_url'), phone: phone, phone_source: 'telegram')
+                                  deal_url: result.fetch('deal_url'), phone: phone, phone_source: Corporate::Channels.for_conversation(conversation))
       Corporate::CrmLinkService.queue!(link, ownership: ownership, actor: mapping.user, assign_owner: false)
     end
   end
