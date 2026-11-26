@@ -91,7 +91,9 @@
         "looking_up": "Looking up the CRM record…"
       },
       "CHANGE_LINK": "Change linked deal",
-      "LEAD": "Lead #{id}: {title}"
+      "LEAD": "Lead #{id}: {title}",
+      "COLLAPSE": "Collapse",
+      "EXPAND": "Expand"
     },
     "MY_AND_SHARED_CLIENTS": "My clients and shared incoming",
     "MESSAGE": {
@@ -148,6 +150,11 @@
     "CHANNEL_NAMES": {
       "TELEGRAM": "Telegram",
       "MAX": "MAX"
+    },
+    "LAYOUT": {
+      "SHOW_INBOX": "Show inbox list",
+      "HIDE_INBOX": "Hide inbox list",
+      "RESIZE_INBOX": "Resize inbox list"
     }
   }
 }

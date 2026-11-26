@@ -91,7 +91,9 @@
         "looking_up": "Ищем карточку в Битрикс24…"
       },
       "CHANGE_LINK": "Изменить привязку",
-      "LEAD": "Лид #{id}: {title}"
+      "LEAD": "Лид #{id}: {title}",
+      "COLLAPSE": "Свернуть",
+      "EXPAND": "Развернуть"
     },
     "MY_AND_SHARED_CLIENTS": "Мои клиенты и общие входящие",
     "MESSAGE": {
@@ -148,6 +150,11 @@
     "CHANNEL_NAMES": {
       "TELEGRAM": "Telegram",
       "MAX": "MAX"
+    },
+    "LAYOUT": {
+      "SHOW_INBOX": "Показать входящие",
+      "HIDE_INBOX": "Скрыть входящие",
+      "RESIZE_INBOX": "Изменить ширину входящих"
     }
   }
 }

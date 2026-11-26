@@ -2,11 +2,6 @@ import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import ResizableEditorWrapper from '../ResizableEditorWrapper.vue';
 
-vi.mock('@vueuse/core', () => ({
-  useEventListener: (target, event, handler, options) =>
-    target.addEventListener(event, handler, options),
-}));
-
 const CONTAINER_HEIGHT = 800;
 const DEFAULT_HEIGHT = 120;
 const MIN_HEIGHT = 80;
@@ -46,6 +41,7 @@ describe('ResizableEditorWrapper', () => {
   let wrapper;
 
   beforeEach(async () => {
+    localStorage.clear();
     wrapper = mountWrapper();
     await wrapper
       .find('.cursor-row-resize')
@@ -120,5 +116,26 @@ describe('ResizableEditorWrapper', () => {
 
     expect(wrapper.emitted('collapse')).toHaveLength(1);
     expect(editorHeight(wrapper)).toBe(DEFAULT_HEIGHT);
+  });
+  it('keeps a manually reduced height after sending and switching chats', async () => {
+    await dragBy(wrapper, DEFAULT_HEIGHT - MIN_HEIGHT);
+    await releaseDrag();
+    wrapper.vm.resetEditorHeight();
+    await nextTick();
+    expect(editorHeight(wrapper)).toBe(MIN_HEIGHT);
+    wrapper.unmount();
+    wrapper = mountWrapper();
+    await nextTick();
+    expect(editorHeight(wrapper)).toBe(MIN_HEIGHT);
+  });
+
+  it('restores the default only on an explicit double click', async () => {
+    await dragBy(wrapper, DEFAULT_HEIGHT - MIN_HEIGHT);
+    await releaseDrag();
+    await wrapper.find('.cursor-row-resize').trigger('dblclick');
+    expect(editorHeight(wrapper)).toBe(DEFAULT_HEIGHT);
+    expect(localStorage.getItem('conversation-editor-height')).toBe(
+      String(DEFAULT_HEIGHT)
+    );
   });
 });

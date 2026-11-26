@@ -73,7 +73,7 @@ Rails сохраняет сеть без выхода в интернет. Се�
 
 ## Выпуск MAX Personal 25.11.2026
 
-Текущая совместимая связка: CW `max-product-20261125`, integration `max-delivery-20261125`, gateway MAX `delivery-20261125-final`. Telegram gateway сохраняет `reliable-20261125`. MAX_DELIVERY_ENABLED=true, MAX_CRM_ENABLED=true, CORPORATE_MAX_INBOX_ID указывает отдельный API inbox. Пустые MAX_TEST_PEER_IDS и MAX_TEST_PHONE означают полный режим. Внутренний MAX_GATEWAY_TOKEN и session остаются только в приватных файлах сервера.
+Текущая совместимая связка: CW `layout-product-20261126` (интерфейс поверх `max-product-20261125`), integration `max-delivery-20261125`, gateway MAX `delivery-20261125-final`. Telegram gateway сохраняет `reliable-20261125`. MAX_DELIVERY_ENABLED=true, MAX_CRM_ENABLED=true, CORPORATE_MAX_INBOX_ID указывает отдельный API inbox. Пустые MAX_TEST_PEER_IDS и MAX_TEST_PHONE означают полный режим. Внутренний MAX_GATEWAY_TOKEN и session остаются только в приватных файлах сервера.
 
 Канал создаёт `scripts/server/activate_max.rb`: запуск через Rails runner возвращает ID inbox для CORPORATE_MAX_INBOX_ID. `scripts/server/prepare-max.py` подготавливает секрет и профиль max-poc, но самостоятельно не авторизует аккаунт и не включает доставку. Вход и 2FA выполняет технический администратор в «Каналы». После проверки сессии и тестового обмена оператор включает флаги доставки/CRM и применяет конфигурацию согласованной связкой образов.
 

@@ -1,6 +1,7 @@
 <script setup>
 /* global axios */
 import { ref, watch, onUnmounted } from 'vue';
+import { useLayoutPreference } from 'dashboard/composables/useLayoutPreference';
 import { useI18n } from 'vue-i18n';
 import {
   corporateCrmEnabled,
@@ -12,6 +13,7 @@ const props = defineProps({
   conversationId: { type: [String, Number], required: true },
 });
 const { t } = useI18n();
+const collapsed = useLayoutPreference('corporate-crm-collapsed', false);
 const info = ref(null);
 const phone = ref('');
 const dealUrl = ref('');
@@ -119,104 +121,124 @@ const reconcile = async () => {
     v-if="corporateCrmEnabled && info"
     class="border-b border-n-weak p-3 text-sm flex flex-col gap-2"
   >
-    <p v-if="info.shared" class="font-semibold">
-      {{ t('CORPORATE.CRM.SHARED_INTAKE') }}
-    </p>
-    <template v-if="info.deal_id">
-      <a
-        :href="info.deal_url"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="underline"
-        >{{
-          t(
-            info.entity_type === 'lead'
-              ? 'CORPORATE.CRM.LEAD'
-              : 'CORPORATE.CRM.DEAL',
-            { id: info.deal_id, title: info.deal_title }
-          )
-        }}</a
-      >
-      <p role="status">{{ t(`CORPORATE.CRM.STATE.${info.state}`) }}</p>
+    <div class="flex items-center justify-between gap-2">
+      <span class="font-semibold">{{ t('CORPORATE.CRM.SYSTEM') }}</span>
       <button
         type="button"
-        :disabled="busy || ['sending', 'unknown'].includes(info.state)"
-        @click="editing = !editing"
+        class="text-n-blue-text hover:underline"
+        :aria-expanded="!collapsed"
+        :aria-controls="`crm-details-${accountId}-${conversationId}`"
+        @click="collapsed = !collapsed"
       >
-        {{ t('CORPORATE.CRM.CHANGE_LINK') }}
+        {{ t(collapsed ? 'CORPORATE.CRM.EXPAND' : 'CORPORATE.CRM.COLLAPSE') }}
       </button>
-      <button
-        v-if="['unknown', 'error', 'pending'].includes(info.state)"
-        type="button"
-        :disabled="busy"
-        @click="reconcile"
-      >
-        {{ t('CORPORATE.CRM.RECONCILE') }}
-      </button>
-    </template>
-    <p v-else>{{ t('CORPORATE.CRM.IDENTIFY') }}</p>
-    <p v-if="corporateRole === 'manager' && !info.employee_mapped">
-      {{ t('CORPORATE.CRM.MAPPING_REQUIRED') }}
-    </p>
-    <template
-      v-else-if="
-        editing || !info.deal_id || ['not_found', 'error'].includes(info.state)
-      "
+    </div>
+    <div
+      v-show="!collapsed"
+      :id="`crm-details-${accountId}-${conversationId}`"
+      class="flex flex-col gap-2"
     >
-      <label v-if="corporateRole === 'supervisor'"
-        >{{ t('CORPORATE.CRM.OWNER') }}
-        <select
-          v-model="ownerId"
-          class="rounded border border-n-weak bg-n-background p-1"
+      <p v-if="info.shared" class="font-semibold">
+        {{ t('CORPORATE.CRM.SHARED_INTAKE') }}
+      </p>
+      <template v-if="info.deal_id">
+        <a
+          :href="info.deal_url"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="underline"
+          >{{
+            t(
+              info.entity_type === 'lead'
+                ? 'CORPORATE.CRM.LEAD'
+                : 'CORPORATE.CRM.DEAL',
+              { id: info.deal_id, title: info.deal_title }
+            )
+          }}</a
         >
-          <option value="">{{ t('CORPORATE.CRM.USE_CURRENT_OWNER') }}</option>
-          <option
-            v-for="member in managers"
-            :key="member.id"
-            :value="member.id"
+        <p role="status">{{ t(`CORPORATE.CRM.STATE.${info.state}`) }}</p>
+        <button
+          type="button"
+          :disabled="busy || ['sending', 'unknown'].includes(info.state)"
+          @click="editing = !editing"
+        >
+          {{ t('CORPORATE.CRM.CHANGE_LINK') }}
+        </button>
+        <button
+          v-if="['unknown', 'error', 'pending'].includes(info.state)"
+          type="button"
+          :disabled="busy"
+          @click="reconcile"
+        >
+          {{ t('CORPORATE.CRM.RECONCILE') }}
+        </button>
+      </template>
+      <p v-else>{{ t('CORPORATE.CRM.IDENTIFY') }}</p>
+      <p v-if="corporateRole === 'manager' && !info.employee_mapped">
+        {{ t('CORPORATE.CRM.MAPPING_REQUIRED') }}
+      </p>
+      <template
+        v-else-if="
+          editing ||
+          !info.deal_id ||
+          ['not_found', 'error'].includes(info.state)
+        "
+      >
+        <label v-if="corporateRole === 'supervisor'"
+          >{{ t('CORPORATE.CRM.OWNER') }}
+          <select
+            v-model="ownerId"
+            class="rounded border border-n-weak bg-n-background p-1"
           >
-            {{ member.name }}
-          </option>
-        </select>
-      </label>
-      <form
-        class="flex flex-wrap items-center gap-2"
-        @submit.prevent="bind('phone')"
-      >
-        <label
-          >{{ t('CORPORATE.CRM.PHONE')
-          }}<input
-            :value="phone"
-            type="tel"
-            :placeholder="t('CORPORATE.CRM.PHONE_EXAMPLE')"
-            required
-            class="rounded border border-n-weak bg-n-background p-1"
-            @input="phone = formatRussianPhone($event.target.value)"
-        /></label>
-        <button type="submit" :disabled="busy">
-          {{ t('CORPORATE.CRM.LINK_PHONE') }}
-        </button>
-      </form>
-      <form
-        class="flex flex-wrap items-center gap-2"
-        @submit.prevent="bind('deal')"
-      >
-        <label
-          >{{ t('CORPORATE.CRM.DEAL_URL')
-          }}<input
-            v-model="dealUrl"
-            type="url"
-            required
-            class="rounded border border-n-weak bg-n-background p-1"
-        /></label>
-        <button type="submit" :disabled="busy">
-          {{ t('CORPORATE.CRM.LINK_DEAL') }}
-        </button>
-      </form>
-    </template>
-    <p v-if="info.state === 'not_found'" role="status">
-      {{ t('CORPORATE.CRM.NOT_FOUND') }}
-    </p>
-    <p v-if="error" role="alert">{{ error }}</p>
+            <option value="">{{ t('CORPORATE.CRM.USE_CURRENT_OWNER') }}</option>
+            <option
+              v-for="member in managers"
+              :key="member.id"
+              :value="member.id"
+            >
+              {{ member.name }}
+            </option>
+          </select>
+        </label>
+        <form
+          class="flex flex-wrap items-center gap-2"
+          @submit.prevent="bind('phone')"
+        >
+          <label
+            >{{ t('CORPORATE.CRM.PHONE')
+            }}<input
+              :value="phone"
+              type="tel"
+              :placeholder="t('CORPORATE.CRM.PHONE_EXAMPLE')"
+              required
+              class="rounded border border-n-weak bg-n-background p-1"
+              @input="phone = formatRussianPhone($event.target.value)"
+          /></label>
+          <button type="submit" :disabled="busy">
+            {{ t('CORPORATE.CRM.LINK_PHONE') }}
+          </button>
+        </form>
+        <form
+          class="flex flex-wrap items-center gap-2"
+          @submit.prevent="bind('deal')"
+        >
+          <label
+            >{{ t('CORPORATE.CRM.DEAL_URL')
+            }}<input
+              v-model="dealUrl"
+              type="url"
+              required
+              class="rounded border border-n-weak bg-n-background p-1"
+          /></label>
+          <button type="submit" :disabled="busy">
+            {{ t('CORPORATE.CRM.LINK_DEAL') }}
+          </button>
+        </form>
+      </template>
+      <p v-if="info.state === 'not_found'" role="status">
+        {{ t('CORPORATE.CRM.NOT_FOUND') }}
+      </p>
+      <p v-if="error" role="alert">{{ error }}</p>
+    </div>
   </section>
 </template>

@@ -10,6 +10,7 @@ import { INBOX_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
 
 import InboxCard from 'dashboard/components-next/Inbox/InboxCard.vue';
 import InboxListHeader from './components/InboxListHeader.vue';
+import InboxListPanel from './components/InboxListPanel.vue';
 import IntersectionObserver from 'dashboard/components/IntersectionObserver.vue';
 import CmdBarConversationSnooze from 'dashboard/routes/dashboard/commands/CmdBarConversationSnooze.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
@@ -223,10 +224,7 @@ onMounted(() => {
 
 <template>
   <section class="flex w-full h-full min-w-0 bg-n-surface-1">
-    <div
-      class="flex flex-col h-full w-full lg:min-w-[340px] lg:max-w-[340px] ltr:border-r rtl:border-l border-n-weak"
-      :class="!currentConversationId ? 'flex' : 'hidden xl:flex'"
-    >
+    <InboxListPanel :class="!currentConversationId ? 'flex' : 'hidden xl:flex'">
       <InboxListHeader
         :is-context-menu-open="isInboxContextMenuOpen"
         @filter="onFilterChange"
@@ -269,7 +267,7 @@ onMounted(() => {
           @observed="loadMoreNotifications"
         />
       </div>
-    </div>
+    </InboxListPanel>
     <router-view />
     <CmdBarConversationSnooze />
   </section>

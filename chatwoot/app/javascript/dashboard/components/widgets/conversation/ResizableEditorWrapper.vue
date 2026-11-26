@@ -8,6 +8,7 @@ import {
   useTemplateRef,
 } from 'vue';
 import { useEventListener } from '@vueuse/core';
+import { useLayoutPreference } from 'dashboard/composables/useLayoutPreference';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 
@@ -26,7 +27,11 @@ const COLLAPSE_DISTANCE = 48;
 
 const wrapperRef = useTemplateRef('wrapperRef');
 const surroundingHeight = ref(0);
-const editorHeight = ref(DEFAULT_HEIGHT);
+const savedHeight = useLayoutPreference(
+  'conversation-editor-height',
+  DEFAULT_HEIGHT
+);
+const editorHeight = ref(savedHeight.value);
 const isResizing = ref(false);
 const startY = ref(0);
 const startHeight = ref(0);
@@ -102,12 +107,14 @@ const onResizeEnd = () => {
   if (!isResizing.value) return;
   isResizing.value = false;
   collapseProgress.value = 0;
+  savedHeight.value = editorHeight.value;
   clearDragStyles();
 };
 
 const collapseEditor = () => {
   onResizeEnd();
   editorHeight.value = sizeBounds.value.default;
+  savedHeight.value = editorHeight.value;
   emit('collapse');
 };
 
@@ -126,7 +133,12 @@ const onResizeMove = event => {
 
 const resetEditorHeight = () => {
   requestedHeight.value = 0;
-  editorHeight.value = sizeBounds.value.default;
+  editorHeight.value = savedHeight.value;
+};
+
+const restoreDefaultHeight = () => {
+  savedHeight.value = DEFAULT_HEIGHT;
+  resetEditorHeight();
 };
 
 const toggleEditorExpand = () => {
@@ -137,6 +149,7 @@ const toggleEditorExpand = () => {
   // If expanded is too close to default, use max so the toggle is always noticeable
   const target = expanded - defaultHeight < 100 ? max : expanded;
   editorHeight.value = isExpanded ? defaultHeight : target;
+  savedHeight.value = editorHeight.value;
 };
 
 const handleMessageSent = () => {
@@ -185,7 +198,7 @@ defineExpose({ toggleEditorExpand, resetEditorHeight });
       class="group absolute inset-x-0 -top-4 z-10 flex h-4 cursor-row-resize select-none items-center justify-center bg-gradient-to-b from-transparent from-10% dark:to-n-surface-1/80 to-n-surface-1/90 backdrop-blur-[0.01875rem]"
       @mousedown="onResizeStart"
       @touchstart.prevent="onResizeStart"
-      @dblclick="resetEditorHeight"
+      @dblclick="restoreDefaultHeight"
     >
       <div
         class="w-8 h-0.5 mt-1 rounded-full bg-n-slate-6 group-hover:bg-n-slate-8 transition-all duration-200 motion-safe:group-hover:animate-bounce"
