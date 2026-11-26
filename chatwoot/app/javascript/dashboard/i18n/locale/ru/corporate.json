@@ -156,6 +156,9 @@
       "HIDE_INBOX": "Скрыть входящие",
       "RESIZE_INBOX": "Изменить ширину входящих",
       "RESIZE_CONVERSATIONS": "Изменить ширину диалогов"
-    }
+    },
+    "RECIPIENT": "Телефон или @username Telegram",
+    "INVALID_RECIPIENT": "Введите полный номер +7 или username Telegram.",
+    "MAX_NOT_FOUND": "MAX не нашёл этот номер. Возможно, поиск ограничен приватностью — попросите клиента написать первым."
   }
 }

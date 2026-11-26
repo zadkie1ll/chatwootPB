@@ -99,12 +99,18 @@ class PersonalDriver:
         async with self.resolve_lock:
             await asyncio.sleep(max(0, 3 - (time.monotonic() - self.last_resolve)))
             self.last_resolve = time.monotonic()
-            result = await self.client(functions.contacts.ResolvePhoneRequest(phone=phone))
-            user = next((user for user in result.users if user.id == result.peer.user_id), None)
+            if phone.startswith('@'):
+                user = await self.client.get_entity(phone)
+                if not isinstance(user, types.User):
+                    raise ValueError('recipient_unavailable')
+            else:
+                result = await self.client(functions.contacts.ResolvePhoneRequest(phone=phone))
+                user = next((user for user in result.users if user.id == result.peer.user_id), None)
             if user is None:
                 raise ValueError('recipient_unavailable')
             return {'external_account_id': self.account_id, 'external_user_id': str(user.id),
-                    'name': ' '.join(filter(None, [user.first_name, user.last_name]))[:128]}
+                    'name': ' '.join(filter(None, [user.first_name, user.last_name]))[:128],
+                    'phone': '+' + user.phone.lstrip('+') if user.phone else None, 'is_bot': bool(user.bot)}
 
     async def send(self, data, random_id, files):
         if not self.account_id or data['external_account_id'] != self.account_id:

@@ -7,6 +7,11 @@ import {
   corporateRole,
   corporateCrmEnabled,
 } from 'dashboard/composables/useCorporate';
+import {
+  formatRecipient,
+  normalizeRussianPhone,
+  normalizeTelegramUsername,
+} from './phone';
 import { useI18n } from 'vue-i18n';
 import MaxSetup from './MaxSetup.vue';
 import TelegramSetup from './TelegramSetup.vue';
@@ -135,10 +140,17 @@ const openChat = async contact => {
   }
 };
 const start = async () => {
+  const recipient =
+    normalizeRussianPhone(phone.value) ||
+    normalizeTelegramUsername(phone.value);
+  if (!recipient) {
+    message.value = t('CORPORATE.INVALID_RECIPIENT');
+    return;
+  }
   busy.value = true;
   try {
     const response = await axios.post(`${api.value}/corporate/conversations`, {
-      phone: phone.value,
+      phone: recipient,
       channel: 'telegram',
     });
     opened.value = false;
@@ -207,11 +219,12 @@ const loadAudit = async delta => {
           <label for="corporate-phone">{{ t('CORPORATE.NEW_CHAT') }}</label>
           <input
             id="corporate-phone"
-            v-model="phone"
-            type="tel"
+            :value="phone"
+            type="text"
             required
             :placeholder="t('CORPORATE.PHONE_EXAMPLE')"
             class="rounded border border-n-weak bg-n-background px-2"
+            @input="phone = formatRecipient($event.target.value, 'telegram')"
           />
           <button
             type="submit"

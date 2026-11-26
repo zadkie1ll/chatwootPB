@@ -7,7 +7,7 @@ import {
   corporateCrmEnabled,
   corporateRole,
 } from 'dashboard/composables/useCorporate';
-import { formatRussianPhone } from './phone';
+import { formatRussianPhone, normalizeRussianPhone } from './phone';
 const props = defineProps({
   accountId: { type: [String, Number], required: true },
   conversationId: { type: [String, Number], required: true },
@@ -83,11 +83,17 @@ onUnmounted(() => {
   clearInterval(timer);
 });
 const bind = async mode => {
+  const normalizedPhone =
+    mode === 'phone' ? normalizeRussianPhone(phone.value) : null;
+  if (mode === 'phone' && !normalizedPhone) {
+    error.value = t('CORPORATE.INVALID_PHONE');
+    return;
+  }
   busy.value = true;
   error.value = '';
   const expected = revision;
   const data =
-    mode === 'phone' ? { phone: phone.value } : { deal_url: dealUrl.value };
+    mode === 'phone' ? { phone: normalizedPhone } : { deal_url: dealUrl.value };
   if (ownerId.value) data.owner_id = ownerId.value;
   try {
     const response = await axios.post(`${endpoint()}/bind`, data);

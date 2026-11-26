@@ -70,3 +70,19 @@ class ReadReceiptTests(unittest.IsolatedAsyncioTestCase):
             await driver.on_read(NS(outbox=False, contents=False, chat_id=20, max_id=101))
             self.assertEqual(journal.events(), [])
             journal.db.close()
+
+
+class UsernameLookupTests(unittest.IsolatedAsyncioTestCase):
+    async def test_resolves_a_user_without_fabricating_a_phone(self):
+        from tg_gateway.driver import PersonalDriver
+        from tg_gateway.journal import Journal
+        with tempfile.TemporaryDirectory() as directory:
+            journal = Journal(directory)
+            driver = PersonalDriver(directory, journal)
+            driver.account_id = '10'
+            driver.client = NS(get_entity=AsyncMock(return_value=types.User(id=20, first_name='Synthetic', bot=True)))
+            result = await driver.resolve('@sample_bot')
+            self.assertEqual(result['external_user_id'], '20')
+            self.assertIsNone(result['phone'])
+            self.assertTrue(result['is_bot'])
+            journal.db.close()

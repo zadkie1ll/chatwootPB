@@ -67,6 +67,16 @@ class DeliveryTests(unittest.IsolatedAsyncioTestCase):
         receipts = [e for e in self.journal.events() if e['event_type'] == 'read']
         self.assertEqual(receipts[0]['read_message_ids'], ['101'])
 
+    async def test_known_dialog_phone_does_not_require_a_new_global_lookup(self):
+        self.client.chats = [NS(id=30, type='DIALOG')]
+        self.client.get_user.return_value = NS(id=20, names=[], phone=None)
+        self.client.search_by_phone = AsyncMock(side_effect=RuntimeError('private phone lookup'))
+        self.driver.track(20)
+        self.journal.put('resolved_phone/20', '+79990000000')
+        result = await self.driver.resolve('+79990000000')
+        self.assertEqual(result['external_user_id'], '20')
+        self.client.search_by_phone.assert_not_awaited()
+
     async def test_receive_is_durable_and_replay_is_suppressed(self):
         await self.driver.capture(message())
         await self.driver.capture(message())

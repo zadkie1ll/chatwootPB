@@ -4,6 +4,11 @@ import { ref, nextTick, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import {
+  formatRecipient,
+  normalizeRussianPhone,
+  normalizeTelegramUsername,
+} from './phone';
 import { corporateRole } from 'dashboard/composables/useCorporate';
 const { t } = useI18n();
 const route = useRoute();
@@ -28,11 +33,17 @@ const open = async () => {
 };
 const start = async () => {
   if (busy.value) return;
-  let digits = phone.value.replace(/\D/g, '');
-  if (digits.length === 10) digits = `7${digits}`;
-  if (digits.length === 11 && digits[0] === '8') digits = `7${digits.slice(1)}`;
-  if (!/^[1-9]\d{6,14}$/.test(digits)) {
-    error.value = t('CORPORATE.INVALID_PHONE');
+  const recipient =
+    normalizeRussianPhone(phone.value) ||
+    (channel.value === 'telegram'
+      ? normalizeTelegramUsername(phone.value)
+      : null);
+  if (!recipient) {
+    error.value = t(
+      channel.value === 'telegram'
+        ? 'CORPORATE.INVALID_RECIPIENT'
+        : 'CORPORATE.INVALID_PHONE'
+    );
     return;
   }
   const accountId = route.params.accountId;
@@ -41,7 +52,7 @@ const start = async () => {
   try {
     const { data } = await axios.post(
       `/api/v1/accounts/${accountId}/corporate/conversations`,
-      { phone: `+${digits}`, channel: channel.value }
+      { phone: recipient, channel: channel.value }
     );
     if (String(route.params.accountId) !== String(accountId)) return;
     opened.value = false;
@@ -49,7 +60,11 @@ const start = async () => {
       `/app/accounts/${accountId}/conversations/${data.conversation_id}`
     );
   } catch (failure) {
-    error.value = failure.response?.data?.error || t('CORPORATE.ERROR');
+    error.value =
+      failure.response?.data?.error ||
+      t(
+        channel.value === 'max' ? 'CORPORATE.MAX_NOT_FOUND' : 'CORPORATE.ERROR'
+      );
   } finally {
     busy.value = false;
   }
@@ -96,16 +111,23 @@ const start = async () => {
             </select>
           </label>
           <label class="flex flex-col gap-2">
-            {{ t('CORPORATE.CLIENT_PHONE') }}
+            {{
+              t(
+                channel === 'telegram'
+                  ? 'CORPORATE.RECIPIENT'
+                  : 'CORPORATE.CLIENT_PHONE'
+              )
+            }}
             <input
               ref="input"
-              v-model="phone"
-              type="tel"
+              :value="phone"
+              :type="channel === 'telegram' ? 'text' : 'tel'"
               autocomplete="tel"
-              maxlength="25"
+              maxlength="64"
               required
               :placeholder="t('CORPORATE.PHONE_EXAMPLE')"
               class="rounded-lg border border-n-weak bg-n-background px-3 py-2"
+              @input="phone = formatRecipient($event.target.value, channel)"
             />
           </label>
           <p v-if="error" role="alert" class="text-sm text-n-ruby-11">
