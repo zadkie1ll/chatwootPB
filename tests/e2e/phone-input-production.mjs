@@ -33,6 +33,12 @@ try {
  await input.fill('+7 (999) 123-45-6');await dialog.locator('button[type=submit]').click();check('Incomplete phone blocked before lookup',requests.length===1);
  await dialog.locator('select').selectOption('telegram');await input.fill('https://t.me/sample_user');await dialog.locator('button[type=submit]').click();
  await page.waitForTimeout(200);check('Telegram link becomes username',requests[1]?.phone==='@sample_user');
+ const readId = process.env.PHONE_TEST_CONVERSATION_ID;
+ if (readId) assert.match(readId, /^\d+$/);
+ for (let attempt = 0; readId && attempt < 2; attempt += 1) {
+  const read = await page.request.post(base+`/api/v1/accounts/1/conversations/${readId}/update_last_seen`, { headers: auth });
+  check('Repeated personal read succeeds', read.status()===200 && (await read.json()).unread_count===0);
+ }
  check('No JavaScript errors',errors.length===0);
 } finally {
  if(auth){const result=await page.request.delete(base+'/auth/sign_out',{headers:auth});check('Probe session revoked',result.status()===200);}

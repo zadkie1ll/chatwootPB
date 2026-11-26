@@ -2,7 +2,7 @@ class CorporateConversationView < ApplicationRecord
   belongs_to :account
   belongs_to :conversation
   belongs_to :user
-  validates :conversation_id, uniqueness: { scope: [:account_id, :user_id] }
+  # The unique database index permits atomic creation from concurrent read requests.
   validate :consistent_account
 
   private

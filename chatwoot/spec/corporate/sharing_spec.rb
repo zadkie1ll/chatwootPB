@@ -187,4 +187,14 @@ RSpec.describe 'Corporate sharing', type: :request do
     expect(published.fetch(stream).dig(:data, :unread_count)).to eq(0)
     expect(published.fetch(stream).dig(:data, :corporate_sharing, :absence)).to be(true)
   end
+
+  it 'updates the same personal view on repeated reads instead of rejecting the existing row' do
+    stamp = Time.current
+    Corporate::PersonalReads.mark(conversation, owner, at: stamp)
+    conversation.messages.create!(account: account, inbox: conversation.inbox, message_type: :incoming,
+                                  content: 'Synthetic', created_at: stamp + 1.second)
+    Corporate::PersonalReads.mark(conversation, owner, at: stamp + 2.seconds)
+    expect(CorporateConversationView.where(account: account, conversation: conversation, user: owner).count).to eq(1)
+    expect(Corporate::PersonalReads.count(conversation, owner)).to eq(0)
+  end
 end

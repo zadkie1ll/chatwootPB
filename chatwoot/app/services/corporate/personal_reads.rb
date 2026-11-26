@@ -24,7 +24,7 @@ class Corporate::PersonalReads
   end
 
   def self.mark(conversation, user, at:, force: false)
-    view = CorporateConversationView.create_or_find_by!(account: conversation.account, conversation: conversation, user: user) do |record|
+    view = CorporateConversationView.find_or_create_by!(account: conversation.account, conversation: conversation, user: user) do |record|
       record.last_seen_at = at
     end
     if force || !recent_without_unread?(conversation, view)
