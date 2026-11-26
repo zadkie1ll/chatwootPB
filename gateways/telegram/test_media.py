@@ -86,3 +86,24 @@ class UsernameLookupTests(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(result['phone'])
             self.assertTrue(result['is_bot'])
             journal.db.close()
+
+
+class BotIntakeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_private_bot_messages_are_retained_but_not_automatically_shared(self):
+        from tg_gateway.driver import PersonalDriver
+        from tg_gateway.journal import Journal
+        with tempfile.TemporaryDirectory() as directory:
+            journal = Journal(directory)
+            driver = PersonalDriver(directory, journal)
+            driver.account_id = '10'
+            driver.ready.set()
+            message = NS(id=30, sender_id=20, edit_date=None, date=datetime.now(timezone.utc), ttl_period=None,
+                photo=None, document=None, media=None, voice=False, entities=[], out=False, message='Synthetic bot')
+            event = NS(is_private=True, chat_id=20, message=message,
+                chat=NS(id=20, first_name='Synthetic bot', last_name='', phone=None, bot=True))
+            await driver.save_message(event, 'received')
+            rows = journal.events()
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]['text'], 'Synthetic bot')
+            self.assertTrue(rows[0]['sharing_restricted'])
+            journal.db.close()

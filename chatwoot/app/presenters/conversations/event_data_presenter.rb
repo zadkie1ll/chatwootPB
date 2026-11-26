@@ -2,7 +2,6 @@ class Conversations::EventDataPresenter < SimpleDelegator
   def push_data
     {
       additional_attributes: additional_attributes,
-      **(Corporate.enabled? ? { corporate_sharing: Corporate::SharingState.for(__getobj__, Current.user) } : {}),
       **push_reply_state,
       channel: inbox.try(:channel_type),
       contact_inbox: contact_inbox,
@@ -14,7 +13,7 @@ class Conversations::EventDataPresenter < SimpleDelegator
       status: status,
       custom_attributes: custom_attributes,
       snoozed_until: snoozed_until,
-      unread_count: Corporate.enabled? ? Corporate::PersonalReads.count(__getobj__) : unread_incoming_messages.count,
+      unread_count: push_unread_count,
       first_reply_created_at: first_reply_created_at,
       priority: priority,
       waiting_since: waiting_since.to_i,
@@ -51,10 +50,13 @@ class Conversations::EventDataPresenter < SimpleDelegator
   end
 
   def push_reply_state
-    {
-      anonymous_caller: contact_inbox&.anonymous_caller?,
-      can_reply: can_reply?
-    }
+    state = { anonymous_caller: contact_inbox&.anonymous_caller?, can_reply: can_reply? }
+    state[:corporate_sharing] = Corporate::SharingState.for(__getobj__, Current.user) if Corporate.enabled?
+    state
+  end
+
+  def push_unread_count
+    Corporate.enabled? ? Corporate::PersonalReads.count(__getobj__) : unread_incoming_messages.count
   end
 
   def push_meta

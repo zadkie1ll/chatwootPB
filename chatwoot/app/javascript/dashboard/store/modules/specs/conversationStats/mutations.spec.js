@@ -14,6 +14,11 @@ describe('#mutations', () => {
         mineCount: 1,
         unAssignedCount: 1,
         allCount: 2,
+        sharedCount: 0,
+        mineUnreadCount: 0,
+        unAssignedUnreadCount: 0,
+        allUnreadCount: 0,
+        sharedUnreadCount: 0,
         updatedOn: expect.any(Date),
       });
     });

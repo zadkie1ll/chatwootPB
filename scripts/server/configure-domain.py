@@ -20,9 +20,34 @@ def run(*args):
     subprocess.run(list(args), check=True, cwd=ROOT, umask=0o022 if args[0] == 'certbot' else -1)
 
 
+def https_configuration(domain, reserve_port=None):
+    configuration = (ROOT / 'infra/nginx/public-https.conf.template').read_text().replace('__DOMAIN__', domain)
+    if reserve_port is None:
+        return configuration
+    if not 1024 <= reserve_port <= 65535:
+        raise ValueError('Reserve HTTPS port must be between 1024 and 65535')
+    configuration = configuration.replace('map $http_upgrade', f"""map $server_port $corporate_public_origin {{
+    default https://{domain};
+    {reserve_port} https://{domain}:{reserve_port};
+}}
+map $http_upgrade""", 1)
+    configuration = configuration.replace('    listen 443 ssl;', f'    listen 443 ssl;\n    listen {reserve_port} ssl;')
+    configuration = configuration.replace('    listen [::]:443 ssl;', f'    listen [::]:443 ssl;\n    listen [::]:{reserve_port} ssl;')
+    configuration = configuration.replace('proxy_set_header Host $host;', 'proxy_set_header Host $http_host;')
+    configuration = configuration.replace('proxy_set_header X-Forwarded-Port 443;', 'proxy_set_header X-Forwarded-Port $server_port;')
+    configuration = configuration.replace('        proxy_pass http://127.0.0.1:8088;', f"""        proxy_pass http://127.0.0.1:8088;
+        proxy_set_header Accept-Encoding "";
+        sub_filter_types application/json;
+        sub_filter_once off;
+        sub_filter 'https://{domain}/' '$corporate_public_origin/';
+        sub_filter "hostURL: 'https://{domain}'" "hostURL: '$corporate_public_origin'";""")
+    return configuration
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('domain')
+    parser.add_argument('--reserve-https-port', type=int)
     parser.add_argument('--expected-ip', default='162.248.166.241')
     options = parser.parse_args()
     domain = options.domain.lower()
@@ -45,6 +70,12 @@ def main():
     previous = available.read_text() if available.exists() else None
     if previous is not None and not previous.startswith(MARKER):
         raise SystemExit('Refusing to overwrite an unmanaged nginx site')
+    reserve_port = options.reserve_https_port
+    if reserve_port is None and previous:
+        existing_ports = {int(port) for port in re.findall(r'listen (\d+) ssl;', previous)} - {443}
+        if len(existing_ports) == 1:
+            reserve_port = existing_ports.pop()
+    https_config = https_configuration(domain, reserve_port)
     previously_enabled = enabled.is_symlink()
     stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
     backup = ROOT / 'backups' / ('domain-' + stamp)
@@ -67,7 +98,7 @@ def main():
             run('certbot', 'certonly', '--webroot', '-w', '/var/www/pravburo-chatwoot-acme',
                 '-d', domain, '--cert-name', domain, '--non-interactive', '--agree-tos',
                 '--deploy-hook', '/usr/sbin/nginx -t && /bin/systemctl reload nginx')
-        available.write_text((templates / 'public-https.conf.template').read_text().replace('__DOMAIN__', domain))
+        available.write_text(https_config)
         if not enabled.is_symlink():
             enabled.symlink_to(available)
         run('nginx', '-t')

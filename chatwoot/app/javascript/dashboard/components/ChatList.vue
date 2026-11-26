@@ -851,6 +851,7 @@ function toggleSelectAll(check) {
 }
 
 useEmitter('corporate_sharing_changed', () => {
+  store.dispatch('conversationPage/reset');
   fetchConversations();
   store.dispatch('conversationStats/getFresh');
 });

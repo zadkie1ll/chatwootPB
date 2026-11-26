@@ -196,10 +196,9 @@ class PersonalDriver:
         message = event.message
         # Never await entity/network lookup before the durable commit.
         peer = getattr(event, 'chat', None) or getattr(event, '_entities', {}).get(event.chat_id)
+        unclassified = peer is None
         if peer is None:
-            peer = SimpleNamespace(id=event.chat_id, first_name='', last_name='', phone=None, bot=False)
-        if getattr(peer, 'bot', False):
-            return
+            peer = SimpleNamespace(id=event.chat_id, first_name='', last_name='', phone=None, bot=None)
         raw_phone = (getattr(peer, 'phone', None) or '').lstrip('+')
         phone = '+' + raw_phone if raw_phone.isdigit() and 7 <= len(raw_phone) <= 15 and not raw_phone.startswith('0') else None
         ephemeral = getattr(message, 'ttl_period', None) or getattr(message.media, 'ttl_seconds', None)
@@ -214,7 +213,7 @@ class PersonalDriver:
                 'event_type': event_type, 'revision': self.revision(event),
                 'timestamp': message.date.isoformat(), 'text': '' if ephemeral else self.visible_text(message),
                 'attachments': [], 'voice': bool(message.voice), 'phone': phone, 'media_id': media_id,
-                'custom_emojis': [] if ephemeral else emojis}
+                'custom_emojis': [] if ephemeral else emojis, 'sharing_restricted': unclassified or bool(getattr(peer, 'bot', False))}
         if ephemeral:
             base['attachment_error'] = 'ephemeral_unsupported'
             base['attachment_state'] = 'failed'

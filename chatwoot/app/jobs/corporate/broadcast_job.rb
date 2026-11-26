@@ -12,6 +12,8 @@ class Corporate::BroadcastJob < ApplicationJob
   def perform(account_id, event_name, data)
     return unless Corporate.enabled?
 
+    Current.corporate_read_cache = nil
+    Current.corporate_absence_cache = nil
     account = Account.find_by(id: account_id)
     return unless account&.active?
 

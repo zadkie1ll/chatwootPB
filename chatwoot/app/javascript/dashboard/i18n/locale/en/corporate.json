@@ -157,7 +157,7 @@
       "RESIZE_INBOX": "Resize inbox list",
       "RESIZE_CONVERSATIONS": "Resize conversation list"
     },
-    "RECIPIENT": "Phone or Telegram @username",
+    "RECIPIENT": "Phone or Telegram {'@'}username",
     "INVALID_RECIPIENT": "Enter a complete +7 phone number or a Telegram username.",
     "MAX_NOT_FOUND": "MAX could not find this number. The account may restrict phone lookup; ask the client to write first.",
     "SHARING": {

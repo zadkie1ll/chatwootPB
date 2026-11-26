@@ -33,6 +33,18 @@ describe('conversation count refresh races', () => {
     vi.useRealTimers();
   });
 
+  it('refreshes personal shared unread counts without waiting for a debounce', async () => {
+    axios.get.mockResolvedValue({
+      data: {
+        meta: { shared_count: 2, shared_unread_count: 7, mine_unread_count: 3 },
+      },
+    });
+    await actions.getFresh({ commit });
+    expect(state.sharedCount).toBe(2);
+    expect(state.sharedUnreadCount).toBe(7);
+    expect(state.mineUnreadCount).toBe(3);
+  });
+
   it('does not send a queued open-count request after filtered counts arrive', async () => {
     axios.get.mockResolvedValue({ data: { meta: { all_count: 30 } } });
     actions.get({ commit, state }, { status: 'open' });

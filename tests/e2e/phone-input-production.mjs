@@ -7,6 +7,7 @@ const pair = [...fs.readFileSync('secrets/managers-20261125-access.txt','utf8').
 const browser = await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,...(process.env.TEST_SOCKS_PROXY ? {proxy:{server:process.env.TEST_SOCKS_PROXY}} : {})});
 const page = await browser.newPage({locale:'ru-RU'});
 const errors=[];page.on('pageerror',e=>errors.push(e.name));
+page.on('console',message=>{if(message.type()==='error'&&/^(SyntaxError|TypeError|ReferenceError):/.test(message.text())) errors.push('render');});
 let auth;
 const check=(name,value)=>{assert.ok(value,name);console.log('PASS '+name);};
 try {
@@ -19,7 +20,6 @@ try {
  const response=await signed;check('Reserve login succeeds',response.status()===200);
  const headers=await response.allHeaders();auth=Object.fromEntries(['access-token','token-type','client','expiry','uid'].filter(k=>headers[k]).map(k=>[k,headers[k]]));
  await page.waitForURL('**/app/accounts/**');
- await page.goto(base+'/app/accounts/1/dashboard');
  await page.getByRole('button',{name:'Мои клиенты',exact:true}).waitFor();
  const socket=await welcome;check('Websocket uses reserve port',new URL(socket.url()).port==='18443');
  let requests=[];

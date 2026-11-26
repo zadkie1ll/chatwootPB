@@ -1,7 +1,10 @@
 <script>
 import { mapGetters } from 'vuex';
 /* global axios */
-import { corporateRole } from 'dashboard/composables/useCorporate';
+import {
+  corporateRole,
+  corporateCrmEnabled,
+} from 'dashboard/composables/useCorporate';
 import CorporateToolbar from './components/corporate/CorporateToolbar.vue';
 import LoadingState from './components/widgets/LoadingState.vue';
 import NetworkNotification from './components/NetworkNotification.vue';
@@ -129,6 +132,7 @@ export default {
           `/api/v1/accounts/${this.currentAccountId}/corporate/access`
         );
         corporateRole.value = data.role;
+        corporateCrmEnabled.value = data.crm_enabled === true;
         if (data.role === 'technical_admin')
           await this.router.replace(
             `/app/accounts/${this.currentAccountId}/settings/inboxes/list`

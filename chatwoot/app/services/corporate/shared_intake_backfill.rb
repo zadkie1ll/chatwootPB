@@ -35,7 +35,13 @@ class Corporate::SharedIntakeBackfill
 
   def unknown_contacts
     identities = ChannelIdentity.where(account: @account, channel: Corporate::Channels::SUPPORTED, verified_phone: [nil, '']).select(:contact_id)
-    @account.contacts.where(phone_number: [nil, ''], id: identities).select(:id)
+    @account.contacts.where(phone_number: [nil, ''], id: identities).where(automatic_sharing_allowed).select(:id)
+  end
+
+  def automatic_sharing_allowed
+    field = Arel::Nodes::InfixOperation.new('->>', Contact.arel_table[:additional_attributes],
+                                            Arel::Nodes.build_quoted('corporate_sharing_restricted'))
+    field.eq(nil).or(field.not_eq('true'))
   end
 
   def incoming_contacts

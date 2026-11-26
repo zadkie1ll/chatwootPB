@@ -143,4 +143,48 @@ RSpec.describe 'Corporate sharing', type: :request do
     expect(Corporate.can_read?(account, colleague, owned)).to be(false)
     expect(CorporateMembership.find_by!(account: account, user: owner).chats_shared_while_absent).to be(false)
   end
+
+  it 'keeps bot or unclassified private messages out of automatic shared intake and backfill' do
+    event = { channel: 'telegram', external_account_id: '10', external_user_id: '20', external_chat_id: '20', external_message_id: '30',
+              event_type: 'received', direction: 'incoming', text: 'Synthetic bot', sharing_restricted: true }
+    with_modified_env(CORPORATE_SHARED_INTAKE_ENABLED: 'true') do
+      message = Corporate::IngestEvent.new(account: account, inbox: conversation.inbox).perform(event, [])
+      expect(CustomerOwnership.find_by!(contact: message.conversation.contact)).not_to be_shared_unidentified
+      expect(Corporate.can_read?(account, colleague, message)).to be(false)
+      expect(Corporate::SharedIntakeBackfill.new(account).perform).to eq(0)
+      Corporate::SharingService.new(account: account, actor: supervisor).conversation(message.conversation, true)
+      expect(Corporate.can_read?(account, colleague, message)).to be(true)
+    end
+  end
+
+  it 'authorizes shared media by conversation and revokes the same URL after closing' do
+    service.conversation(conversation, true)
+    [conversation, sibling].each do |target|
+      message = target.messages.create!(account: account, inbox: target.inbox, message_type: :incoming, content: 'Synthetic')
+      attachment = Attachment.create!(account: account, message: message, file_type: :file, meta: { scan_state: 'clean' })
+      head "/api/v1/corporate_files/#{attachment.id}", headers: auth(colleague)
+      expect(response.status).to eq(target == conversation ? 200 : 404)
+      next unless target == conversation
+
+      service.conversation(conversation, false)
+      head "/api/v1/corporate_files/#{attachment.id}", headers: auth(colleague)
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
+  it 'refreshes read and absence metadata between broadcasts on the same worker thread' do
+    service.conversation(conversation, true)
+    colleague
+    conversation.messages.create!(account: account, inbox: conversation.inbox, message_type: :incoming, content: 'Synthetic')
+    published = {}
+    allow(ActionCable.server).to receive(:broadcast) { |stream, payload| published[stream] = payload }
+    Corporate::BroadcastJob.perform_now(account.id, 'conversation.updated', { id: conversation.display_id })
+    stream = Corporate.stream(account.id, colleague.id)
+    expect(published.fetch(stream).dig(:data, :unread_count)).to eq(1)
+    CorporateConversationView.create!(account: account, conversation: conversation, user: colleague, last_seen_at: Time.current)
+    Corporate.membership(account, owner).update!(chats_shared_while_absent: true)
+    Corporate::BroadcastJob.perform_now(account.id, 'conversation.updated', { id: conversation.display_id })
+    expect(published.fetch(stream).dig(:data, :unread_count)).to eq(0)
+    expect(published.fetch(stream).dig(:data, :corporate_sharing, :absence)).to be(true)
+  end
 end

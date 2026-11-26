@@ -3,10 +3,7 @@
 import { ref, computed, watch } from 'vue';
 import { onClickOutside, onKeyStroke } from '@vueuse/core';
 import { useRouter } from 'vue-router';
-import {
-  corporateRole,
-  corporateCrmEnabled,
-} from 'dashboard/composables/useCorporate';
+import { corporateCrmEnabled } from 'dashboard/composables/useCorporate';
 import {
   formatRecipient,
   normalizeRussianPhone,
@@ -55,16 +52,12 @@ watch(
   () => props.accountId,
   async id => {
     role.value = '';
-    corporateRole.value = '';
-    corporateCrmEnabled.value = false;
     clients.value = [];
     if (!enabled || !id) return;
     try {
       const response = await axios.get(`${api.value}/corporate/access`);
       role.value = response.data.role;
       gatewayMode.value = response.data.gateway_mode;
-      corporateRole.value = role.value;
-      corporateCrmEnabled.value = response.data.crm_enabled === true;
       if (role.value === 'technical_admin')
         router.replace(`/app/accounts/${props.accountId}/settings/inboxes`);
     } catch {

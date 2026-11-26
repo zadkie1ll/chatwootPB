@@ -48,7 +48,8 @@ class Corporate::StartConversation
     unless identity
       contact = Corporate::ChannelContact.find(@account, phone)
       contact ||= @account.contacts.create!(name: recipient['name'].presence || @recipient_label, phone_number: phone,
-                                            identifier: "#{@channel}/#{external_account}/#{external_user}")
+                                            identifier: "#{@channel}/#{external_account}/#{external_user}",
+                                            additional_attributes: { corporate_sharing_restricted: recipient['is_bot'] == true })
       identity = ChannelIdentity.create!(account: @account, contact: contact, channel: @channel,
                                          external_account_id: external_account, external_user_id: external_user, verified_phone: phone)
     end

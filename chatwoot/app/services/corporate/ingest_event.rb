@@ -79,8 +79,10 @@ class Corporate::IngestEvent
     return existing if existing
 
     contact = @account.contacts.create!(name: event[:sender_name].presence || I18n.t('corporate.unknown_contact'), phone_number: event[:phone],
-                                        identifier: "#{event[:channel]}/#{event[:external_account_id]}/#{event[:external_user_id]}")
-    shared = Corporate.shared_intake_enabled?(@account) && event[:direction] == 'incoming' && event[:phone].blank?
+                                        identifier: "#{event[:channel]}/#{event[:external_account_id]}/#{event[:external_user_id]}",
+                                        additional_attributes: { corporate_sharing_restricted: event[:sharing_restricted] == true })
+    shared = Corporate.shared_intake_enabled?(@account) && event[:direction] == 'incoming' &&
+             event[:phone].blank? && event[:sharing_restricted] != true
     CustomerOwnership.create!(account: @account, contact: contact, shared_unidentified: shared)
     contact
   end
