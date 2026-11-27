@@ -60,6 +60,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       # ----------------------------------
       resources :corporate_files, only: [:show]
+      resources :corporate_push_receipts, only: [:create]
 
       # start of account scoped api routes
       resources :accounts, only: [:create, :show, :update] do
@@ -212,6 +213,11 @@ Rails.application.routes.draw do
             resource :twilio_channel, only: [:create]
           end
           namespace :corporate do
+            resource :browser_push, only: [:create, :destroy], controller: :browser_push do
+              post :status
+              post :test
+              post :confirm
+            end
             resource :sharing, only: [:show], controller: 'sharing' do
               patch :absence
               get 'conversations/:id', action: :conversation

@@ -155,6 +155,7 @@ export default {
       this.reconnectService = new ReconnectService(this.store, this.router);
       window.reconnectService = this.reconnectService;
 
+      if (window.chatwootConfig?.corporateAccessEnabled) return;
       verifyServiceWorkerExistence(registration =>
         registration.pushManager.getSubscription().then(subscription => {
           if (subscription) {

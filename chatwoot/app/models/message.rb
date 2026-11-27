@@ -353,6 +353,7 @@ class Message < ApplicationRecord
     send_reply
     execute_message_template_hooks
     update_contact_activity
+    Corporate::PushMessageJob.perform_later(id) if Corporate::BrowserPush.enabled? && incoming? && !private?
   end
 
   def update_contact_activity

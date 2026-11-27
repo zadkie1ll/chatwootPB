@@ -13,3 +13,5 @@ filter_regex = /\A(?!.*\bwebsite_token\b).*token/i
 Rails.application.config.filter_parameters += [filter_regex]
 Rails.application.config.filter_parameters += [:api_hash, :code, :phone]
 Rails.application.config.filter_parameters += [:deal_url, :bitrix_webhook_url]
+
+Rails.application.config.filter_parameters += [:endpoint, :p256dh]

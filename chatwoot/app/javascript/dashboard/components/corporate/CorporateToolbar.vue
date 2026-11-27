@@ -10,6 +10,7 @@ import {
   normalizeTelegramUsername,
 } from './phone';
 import { useI18n } from 'vue-i18n';
+import BrowserNotifications from './BrowserNotifications.vue';
 import InterfaceScale from './InterfaceScale.vue';
 import SharingControls from './SharingControls.vue';
 import MaxSetup from './MaxSetup.vue';
@@ -209,6 +210,11 @@ const loadAudit = async delta => {
         v-if="role === 'manager'"
         :account-id="accountId"
         compact
+      />
+      <BrowserNotifications
+        v-if="['manager', 'supervisor'].includes(role)"
+        :key="accountId"
+        :account-id="accountId"
       />
       <InterfaceScale />
     </div>

@@ -32,3 +32,9 @@ en:
       quota: "OpenAI request limit or available balance has been reached. Try again later."
       unavailable: "Unable to generate a summary. Try again later."
       incomplete: "The summary could not be completed. Try again later."
+
+    push:
+      test_title: "Notification test"
+      test_body: "If you see this notification, confirm it in the messenger."
+      message_title: "New message"
+      message_body: "Open the messenger to read the message."

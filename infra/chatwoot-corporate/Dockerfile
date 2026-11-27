@@ -21,6 +21,7 @@ COPY chatwoot/lib /app/lib
 COPY chatwoot/config /app/config
 COPY chatwoot/db /app/db
 COPY --from=frontend /app/public /app/public
+COPY chatwoot/public/sw.js /app/public/sw.js
 RUN test ! -d /app/enterprise \
     && ruby -I/app/lib -rchatwoot_app -e 'abort "Enterprise enabled" if ChatwootApp.enterprise?'
 

@@ -172,6 +172,51 @@
       "END_ABSENCE": "Stop absence sharing",
       "ABSENCE_HINT": "Colleagues can read and reply to all your chats. Ownership stays unchanged.",
       "ERROR": "Could not update sharing"
+    },
+    "PUSH": {
+      "TITLE": "Notifications",
+      "ENABLE": "Enable notifications",
+      "DISABLE": "Disable",
+      "TEST": "Send test",
+      "CONFIRM": "I see the notification",
+      "REFRESH": "Check again",
+      "ERROR": "Could not complete the check. Check your connection and reconnect.",
+      "RECEIVED": "Test received by browser: {time}",
+      "SYSTEM_LIMIT": "The site cannot inspect Do Not Disturb, operating system notification settings or background restrictions. Confirm that the test is visible.",
+      "PROFILE_HINT": "Use the Notifications button in the top bar to configure notifications.",
+      "STATE": {
+        "unsupported": "Notifications unsupported",
+        "offline": "Offline",
+        "blocked": "Notifications blocked",
+        "off": "Notifications off",
+        "error": "Notification error",
+        "not_configured": "Sending not configured",
+        "disconnected": "Notifications disconnected",
+        "checking": "Waiting for test notification",
+        "verified": "Notifications connected",
+        "confirm": "Test received — confirm display",
+        "connected": "Connected — test display"
+      },
+      "HELP": {
+        "unsupported": "HTTPS and a browser supporting Web Push are required. On iPhone, add the site to the Home Screen and open it there.",
+        "offline": "Connect to the internet. Checks resume when online.",
+        "blocked": "Allow notifications for this address in browser settings, then check again.",
+        "off": "Enable notifications and allow the browser prompt. Each site address needs its own permission.",
+        "error": "The subscription may have expired or the browser cannot reach its push service. Reconnect.",
+        "not_configured": "The server is not configured to send notifications. Contact your supervisor.",
+        "disconnected": "Connect this browser to receive messages for conversations you can access.",
+        "checking": "The push service accepted the test. Waiting for browser acknowledgement.",
+        "verified": "Permission, subscription, receipt and visible display have been confirmed. Test again after changing system settings.",
+        "confirm": "The browser processed the test. Confirm only if you actually saw it.",
+        "connected": "Send a test. If invisible, check site permissions, browser notifications in system settings and Do Not Disturb."
+      },
+      "ERROR_BROWSER": "The browser rejected the push subscription. Check site permissions and browser notifications in system settings.",
+      "ERROR_WORKER": "The notification worker did not start. Reload and check browser extensions.",
+      "ERROR_SESSION": "Your login session expired. Sign in and reconnect notifications.",
+      "ERROR_PROVIDER": "Could not reach the push service. Check your connection, VPN and network restrictions, then reconnect.",
+      "ERROR_RATE": "Wait 10 seconds before another test.",
+      "ERROR_RECEIPT": "The browser has not acknowledged the test yet. Wait or send another test.",
+      "ERROR_EXPIRED": "The subscription expired. Reconnect notifications."
     }
   }
 }
