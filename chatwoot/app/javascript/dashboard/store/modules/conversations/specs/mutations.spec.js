@@ -132,3 +132,44 @@ describe('#mutations', () => {
     });
   });
 });
+
+describe('Outgoing message reconciliation', () => {
+  it.each(['socket-first', 'response-first'])(
+    'keeps one message when the server response and socket event arrive %s',
+    order => {
+      const state = {
+        allConversations: [{ id: 1, messages: [] }],
+        selectedChatId: 1,
+      };
+      const add = message =>
+        mutations[types.ADD_MESSAGE](state, { conversation_id: 1, ...message });
+      add({ id: 'temp-1', content: 'Synthetic' });
+      const socket = { id: 50, content: 'Synthetic' };
+      const response = { ...socket, echo_id: 'temp-1' };
+      (order === 'socket-first'
+        ? [socket, response]
+        : [response, socket]
+      ).forEach(add);
+      add({ id: 51, content: 'Synthetic' });
+      expect(
+        state.allConversations[0].messages.map(message => message.id)
+      ).toEqual([50, 51]);
+    }
+  );
+  it('repairs duplicate IDs on an update without removing another pending message', () => {
+    const state = {
+      allConversations: [
+        { id: 1, messages: [{ id: 50 }, { id: 50 }, { id: 'temp-2' }] },
+      ],
+    };
+    mutations[types.ADD_MESSAGE](state, {
+      id: 50,
+      conversation_id: 1,
+      status: 'read',
+    });
+    expect(state.allConversations[0].messages).toEqual([
+      { id: 50, conversation_id: 1, status: 'read' },
+      { id: 'temp-2' },
+    ]);
+  });
+});

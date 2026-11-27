@@ -10,6 +10,7 @@ import {
   normalizeTelegramUsername,
 } from './phone';
 import { useI18n } from 'vue-i18n';
+import InterfaceScale from './InterfaceScale.vue';
 import SharingControls from './SharingControls.vue';
 import MaxSetup from './MaxSetup.vue';
 import TelegramSetup from './TelegramSetup.vue';
@@ -183,7 +184,7 @@ const loadAudit = async delta => {
   <div
     v-if="enabled && accountId && role"
     ref="toolbar"
-    class="relative z-50 border-b border-n-weak bg-n-background p-2 text-sm"
+    class="relative z-50 flex flex-wrap items-center gap-2 border-b border-n-weak bg-n-background px-2 py-1 text-sm"
   >
     <button
       type="button"
@@ -203,7 +204,14 @@ const loadAudit = async delta => {
     <span v-if="gatewayMode === 'mock'" class="ms-3 text-xs text-n-slate-11">{{
       t('CORPORATE.TEST_MODE')
     }}</span>
-    <SharingControls v-if="role === 'manager'" :account-id="accountId" />
+    <div class="ms-auto flex flex-wrap items-center justify-end gap-3">
+      <SharingControls
+        v-if="role === 'manager'"
+        :account-id="accountId"
+        compact
+      />
+      <InterfaceScale />
+    </div>
     <PipelineHealth v-if="isSupervisor" :account-id="accountId" compact />
     <section
       v-if="opened"

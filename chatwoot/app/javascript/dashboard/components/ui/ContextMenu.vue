@@ -1,4 +1,5 @@
 <script setup>
+import { interfaceCoordinate } from 'dashboard/composables/useInterfaceScale';
 import {
   computed,
   onMounted,
@@ -51,7 +52,11 @@ const calculatePosition = (x, y, menuW, menuH, windowW, windowH) => {
 };
 
 const position = computed(() => {
-  if (!menuRef.value) return { top: `${props.y}px`, left: `${props.x}px` };
+  if (!menuRef.value)
+    return {
+      top: `${interfaceCoordinate(props.y)}px`,
+      left: `${interfaceCoordinate(props.x)}px`,
+    };
 
   const { left, top } = calculatePosition(
     props.x,
@@ -63,8 +68,8 @@ const position = computed(() => {
   );
 
   return {
-    top: `${top}px`,
-    left: `${left}px`,
+    top: `${interfaceCoordinate(top)}px`,
+    left: `${interfaceCoordinate(left)}px`,
   };
 });
 

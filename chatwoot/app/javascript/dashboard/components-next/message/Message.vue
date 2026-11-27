@@ -634,12 +634,11 @@ provideMessageContext({
         <Avatar v-bind="avatarInfo" :size="24" />
       </div>
       <div
-        class="[grid-area:bubble] flex min-w-0"
+        class="[grid-area:bubble] flex flex-col min-w-0"
         :class="{
-          'ltr:ml-8 rtl:mr-8 justify-end': orientation === ORIENTATION.RIGHT,
-          'ltr:mr-8 rtl:ml-8': orientation === ORIENTATION.LEFT,
-          'flex-col items-start gap-2':
-            shouldShowWhatsappReferral || isForwardedEmail,
+          'ltr:ml-8 rtl:mr-8 items-end': orientation === ORIENTATION.RIGHT,
+          'ltr:mr-8 rtl:ml-8 items-start': orientation === ORIENTATION.LEFT,
+          'gap-2': shouldShowWhatsappReferral || isForwardedEmail,
         }"
         @contextmenu="openContextMenu($event)"
       >

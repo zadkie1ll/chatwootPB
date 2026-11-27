@@ -22,6 +22,7 @@ import WootSnackbarBox from './components/SnackbarContainer.vue';
 import { setColorTheme } from './helper/themeHelper';
 import { isOnOnboardingView } from 'v3/helpers/RouteHelper';
 import { useAccount } from 'dashboard/composables/useAccount';
+import { useInterfaceScaleDOM } from 'dashboard/composables/useInterfaceScale';
 import { useFontSize } from 'dashboard/composables/useFontSize';
 import {
   registerSubscription,
@@ -52,6 +53,7 @@ export default {
     const { accountId } = useAccount();
     // Use the font size composable (it automatically sets up the watcher)
     const { currentFontSize } = useFontSize();
+    useInterfaceScaleDOM();
     const { uiSettings } = useUISettings();
 
     return {
@@ -169,7 +171,7 @@ export default {
   <div
     v-if="!authUIFlags.isFetching && corporateReady"
     id="app"
-    class="flex flex-col w-full h-screen min-h-0 bg-n-background"
+    class="flex flex-col w-full h-[calc(100dvh/var(--interface-scale,1))] min-h-0 bg-n-background"
     :dir="isRTL ? 'rtl' : 'ltr'"
   >
     <CorporateToolbar :account-id="currentAccountId" />

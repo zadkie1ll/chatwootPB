@@ -253,7 +253,15 @@ export const mutations = {
 
     const pendingMessageIndex = findPendingMessageIndex(chat, message);
     if (pendingMessageIndex !== -1) {
-      chat.messages[pendingMessageIndex] = message;
+      // A socket event can arrive before the HTTP response containing echo_id.
+      // Replace the optimistic entry and remove the already received server copy.
+      chat.messages = chat.messages.flatMap((existing, index) => {
+        if (index === pendingMessageIndex) return [message];
+        return existing.id === message.id ||
+          (message.echo_id && existing.id === message.echo_id)
+          ? []
+          : [existing];
+      });
     } else {
       chat.messages.push(message);
       chat.timestamp = message.created_at;

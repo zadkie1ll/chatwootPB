@@ -4,6 +4,7 @@ import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { emitter } from 'shared/helpers/mitt';
 const props = defineProps({
+  compact: { type: Boolean, default: false },
   accountId: { type: [String, Number], required: true },
   conversationId: { type: [String, Number], default: null },
 });
@@ -58,7 +59,8 @@ const toggle = async () => {
 
 <template>
   <div
-    class="flex flex-wrap items-center gap-2 p-2 text-sm border-b border-n-weak"
+    class="flex flex-wrap items-center gap-2 text-sm"
+    :class="compact ? 'justify-end' : 'p-2 border-b border-n-weak'"
   >
     <template v-if="state">
       <button

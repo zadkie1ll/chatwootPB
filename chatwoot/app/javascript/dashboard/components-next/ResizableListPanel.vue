@@ -1,4 +1,5 @@
 <script setup>
+import { interfaceCoordinate } from 'dashboard/composables/useInterfaceScale';
 import { computed, ref, useCssVars } from 'vue';
 import { useLayoutPreference } from 'dashboard/composables/useLayoutPreference';
 import { useI18n } from 'vue-i18n';
@@ -37,14 +38,22 @@ let drag = null;
 const startResize = event => {
   if (event.button !== 0) return;
   const direction = getComputedStyle(panel.value).direction === 'rtl' ? -1 : 1;
-  drag = { x: event.clientX, width: width.value, direction };
+  drag = {
+    x: interfaceCoordinate(event.clientX),
+    width: width.value,
+    direction,
+  };
   event.currentTarget.setPointerCapture(event.pointerId);
 };
 const resize = event => {
   if (!drag) return;
   width.value = Math.min(
     MAX_WIDTH,
-    Math.max(MIN_WIDTH, drag.width + (event.clientX - drag.x) * drag.direction)
+    Math.max(
+      MIN_WIDTH,
+      drag.width +
+        (interfaceCoordinate(event.clientX) - drag.x) * drag.direction
+    )
   );
 };
 const resizeWithKeyboard = event => {

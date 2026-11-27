@@ -1,4 +1,5 @@
 <script setup>
+import { interfaceCoordinate } from 'dashboard/composables/useInterfaceScale';
 import {
   ref,
   computed,
@@ -88,7 +89,8 @@ const clearDragStyles = () => {
   Object.assign(document.body.style, { cursor: '', userSelect: '' });
 };
 
-const getClientY = e => (e.touches ? e.touches[0].clientY : e.clientY);
+const getClientY = e =>
+  interfaceCoordinate(e.touches ? e.touches[0].clientY : e.clientY);
 
 const onResizeStart = event => {
   measureSurroundingHeight();

@@ -155,7 +155,8 @@
       "SHOW_INBOX": "Показать входящие",
       "HIDE_INBOX": "Скрыть входящие",
       "RESIZE_INBOX": "Изменить ширину входящих",
-      "RESIZE_CONVERSATIONS": "Изменить ширину диалогов"
+      "RESIZE_CONVERSATIONS": "Изменить ширину диалогов",
+      "SCALE": "Масштаб"
     },
     "RECIPIENT": "Телефон или {'@'}username Telegram",
     "INVALID_RECIPIENT": "Введите полный номер +7 или username Telegram.",

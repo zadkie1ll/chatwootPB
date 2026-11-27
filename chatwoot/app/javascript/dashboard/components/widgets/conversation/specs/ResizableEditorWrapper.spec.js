@@ -50,6 +50,17 @@ describe('ResizableEditorWrapper', () => {
 
   afterEach(() => {
     wrapper.unmount();
+    delete document.documentElement.dataset.interfaceScale;
+  });
+
+  it('resizes by CSS pixels when the interface is scaled down', async () => {
+    await releaseDrag();
+    document.documentElement.dataset.interfaceScale = '0.65';
+    await wrapper
+      .find('.cursor-row-resize')
+      .trigger('mousedown', { clientY: START_Y });
+    await dragBy(wrapper, -65);
+    expect(editorHeight(wrapper)).toBe(DEFAULT_HEIGHT + 100);
   });
 
   it('stops shrinking at the minimum height', async () => {

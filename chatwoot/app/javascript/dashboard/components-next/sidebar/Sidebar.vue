@@ -1,4 +1,5 @@
 <script setup>
+import { interfaceCoordinate } from 'dashboard/composables/useInterfaceScale';
 import { h, ref, computed, onMounted, watch } from 'vue';
 import { provideSidebarContext, useSidebarResize } from './provider';
 import { useAccount } from 'dashboard/composables/useAccount';
@@ -181,7 +182,7 @@ provideSidebarContext({
 
 // Get clientX from mouse or touch event
 const getClientX = event =>
-  event.touches ? event.touches[0].clientX : event.clientX;
+  interfaceCoordinate(event.touches ? event.touches[0].clientX : event.clientX);
 
 const onResizeStart = event => {
   isResizing.value = true;
