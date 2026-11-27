@@ -236,7 +236,10 @@ Rails.application.routes.draw do
             resource :channel, only: [:show], controller: :channel do
               post :connect
             end
-            resources :staff, only: [:index, :create, :destroy], controller: :staff
+            resources :staff, only: [:index, :create, :update, :destroy], controller: :staff do
+              get :directory, on: :collection
+              post :enable, on: :member
+            end
             resource :access, only: [:show], controller: :access do
               get :staff
             end

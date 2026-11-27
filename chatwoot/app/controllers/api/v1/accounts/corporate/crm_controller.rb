@@ -7,7 +7,7 @@ class Api::V1::Accounts::Corporate::CrmController < Api::V1::Accounts::BaseContr
     directory = ::Corporate::CrmClient.new.call('employees')
     members = CorporateMembership.where(account: Current.account, role: 'manager', active: true).includes(:user).order(:id).limit(200)
     mappings = CorporateCrmEmployee.where(account: Current.account).pluck(:user_id, :external_user_id).to_h
-    render json: { portal: directory.fetch('portal'), employees: directory.fetch('employees'),
+    render json: { portal: directory.fetch('portal'), employees: directory.fetch('employees'), assigned_ids: mappings.values.uniq,
                    managers: members.map do |member|
                      { id: member.user_id, name: member.user.name, email: member.user.email,
                        bitrix_user_id: mappings[member.user_id] }
@@ -19,12 +19,8 @@ class Api::V1::Accounts::Corporate::CrmController < Api::V1::Accounts::BaseContr
     raise ActiveRecord::RecordNotFound unless ::Corporate.role(Current.account, user) == 'manager'
 
     external_id = params.require(:bitrix_user_id).to_s
-    raise ActionController::BadRequest unless external_id.match?(/\A[1-9]\d{0,17}\z/)
-
-    directory = ::Corporate::CrmClient.new.call('employees')
-    raise ActionController::BadRequest unless directory.fetch('employees').any? { |employee| employee.fetch('id') == external_id }
-
-    save_mapping(user, external_id)
+    ::Corporate::StaffCrm.new(Current.account).employee(external_id)
+    Current.account.with_lock { ::Corporate::StaffCrm.new(Current.account).map!(user, external_id) }
     head :no_content
   rescue ActiveRecord::RecordInvalid
     render json: { error: I18n.t('corporate.crm_mapping_conflict') }, status: :unprocessable_entity
@@ -54,21 +50,6 @@ class Api::V1::Accounts::Corporate::CrmController < Api::V1::Accounts::BaseContr
   end
 
   private
-
-  def save_mapping(user, external_id)
-    Current.account.with_lock do
-      mapping = CorporateCrmEmployee.find_or_initialize_by(account: Current.account, user: user)
-      validate_mapping_change!(mapping, user, external_id)
-      mapping.update!(external_user_id: external_id)
-    end
-  end
-
-  def validate_mapping_change!(mapping, user, external_id)
-    return unless mapping.persisted? && mapping.external_user_id != external_id
-
-    owned = CustomerOwnership.where(account: Current.account, owner: user).select(:contact_id)
-    raise ::Corporate::CrmClient::Error, 'crm_mapping_in_use' if CorporateCrmLink.exists?(account: Current.account, contact_id: owned)
-  end
 
   def scoped_conversation
     ::Corporate.conversations(Current.account, Current.user).find_by!(display_id: params[:id])

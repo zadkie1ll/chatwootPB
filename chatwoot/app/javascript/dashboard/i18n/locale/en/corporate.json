@@ -217,6 +217,58 @@
       "ERROR_RATE": "Wait 10 seconds before another test.",
       "ERROR_RECEIPT": "The browser has not acknowledged the test yet. Wait or send another test.",
       "ERROR_EXPIRED": "The subscription expired. Reconnect notifications."
+    },
+    "ADMIN": {
+      "TITLE": "Managers",
+      "SUBTITLE": "Employees, messenger access and Bitrix24 links",
+      "ADD": "Add manager",
+      "EDIT": "Manage",
+      "ENABLE": "Restore access",
+      "ENABLE_CONFIRM": "Restore access for {name}? Previously reassigned clients will not be returned automatically.",
+      "SEARCH": "Search employees",
+      "SEARCH_PLACEHOLDER": "Name or work email",
+      "STATUS": "Access",
+      "ALL": "All employees",
+      "ACTIVE": "Active",
+      "FIND": "Search",
+      "LOADING": "Loading employees…",
+      "EMPTY": "No employees found",
+      "PAGINATION": "Employee list pages",
+      "FOUND": "Found: {total}",
+      "ABSENT": "Chats shared with colleagues",
+      "BITRIX_ID": "ID {id}",
+      "PUSH_DEVICES": "Confirmed {verified} of {connected}",
+      "PUSH_HELP": "Notifications: confirmed tests and active browser subscriptions. System restrictions cannot be checked remotely.",
+      "NEVER": "No sign-in yet",
+      "SOURCE": "Add from",
+      "FROM_BITRIX": "Bitrix24",
+      "MANUAL": "Manual entry",
+      "NEW_PASSWORD": "New password — leave empty to keep the current one",
+      "GENERATE": "Generate password",
+      "SHOW_PASSWORD": "Show password",
+      "HIDE_PASSWORD": "Hide password",
+      "SESSION_NOTICE": "Changing email or password ends previous employee sessions. Share new credentials privately.",
+      "IDENTITY": "Integration identifiers: account {account}, employee {user}. These remain stable when name or email changes.",
+      "CREDENTIALS_ONCE": "Save these credentials and share them with the employee. The password is not shown again after closing this window.",
+      "COPY": "Copy credentials",
+      "COPY_FAILED": "Could not copy. Select and copy the credentials manually.",
+      "DONE": "Done",
+      "COUNTER": {
+        "total": "All managers",
+        "active": "With access",
+        "disabled": "Disabled",
+        "mapped": "Linked to Bitrix24"
+      },
+      "COLUMN": {
+        "employee": "Employee",
+        "access": "Access",
+        "clients": "Clients",
+        "conversations": "Conversations",
+        "bitrix": "Bitrix24",
+        "notifications": "Notifications",
+        "login": "Last sign-in",
+        "actions": "Actions"
+      }
     }
   }
 }

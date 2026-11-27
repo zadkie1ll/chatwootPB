@@ -28,7 +28,7 @@ class Corporate::RequestGuard
     'corporate/max_channel' => { 'technical_admin' => %w[show connect] },
     'corporate/health' => { 'supervisor' => %w[show] },
     'corporate/channel' => { 'technical_admin' => %w[show connect] },
-    'corporate/staff' => { 'supervisor' => %w[index create destroy] },
+    'corporate/staff' => { 'supervisor' => %w[index directory create update enable destroy] },
     'corporate/access' => { 'supervisor' => %w[show staff], 'manager' => %w[show], 'technical_admin' => %w[show] }
   }.freeze
 

@@ -3,7 +3,6 @@
 import { ref, computed, watch } from 'vue';
 import { onClickOutside, onKeyStroke } from '@vueuse/core';
 import { useRouter } from 'vue-router';
-import { corporateCrmEnabled } from 'dashboard/composables/useCorporate';
 import {
   formatRecipient,
   normalizeRussianPhone,
@@ -15,8 +14,6 @@ import InterfaceScale from './InterfaceScale.vue';
 import SharingControls from './SharingControls.vue';
 import MaxSetup from './MaxSetup.vue';
 import TelegramSetup from './TelegramSetup.vue';
-import StaffManagement from './StaffManagement.vue';
-import CrmEmployees from './CrmEmployees.vue';
 import PipelineHealth from './PipelineHealth.vue';
 
 const props = defineProps({
@@ -202,6 +199,14 @@ const loadAudit = async delta => {
         )
       }}
     </button>
+    <RouterLink
+      v-if="isSupervisor"
+      :to="`/app/accounts/${accountId}/corporate/managers`"
+      class="rounded px-3 py-2 text-n-blue-text"
+      @click="opened = false"
+    >
+      {{ t('CORPORATE.ADMIN.TITLE') }}
+    </RouterLink>
     <span v-if="gatewayMode === 'mock'" class="ms-3 text-xs text-n-slate-11">{{
       t('CORPORATE.TEST_MODE')
     }}</span>
@@ -321,11 +326,6 @@ const loadAudit = async delta => {
             {{ t('CORPORATE.NEXT') }}
           </button>
         </div>
-        <StaffManagement v-if="isSupervisor" :account-id="accountId" />
-        <CrmEmployees
-          v-if="isSupervisor && corporateCrmEnabled"
-          :account-id="accountId"
-        />
         <section v-if="isSupervisor" class="mt-4 border-t border-n-weak pt-4">
           <button type="button" @click="loadAudit(0)">
             {{ t('CORPORATE.AUDIT') }}

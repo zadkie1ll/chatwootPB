@@ -984,11 +984,23 @@ const menuItems = computed(() => {
   ];
   if (window.chatwootConfig?.corporateAccessEnabled) {
     const isTechnical = corporateRole.value === 'technical_admin';
+    if (corporateRole.value === 'supervisor')
+      items.push({
+        name: 'Corporate Managers',
+        label: t('CORPORATE.ADMIN.TITLE'),
+        icon: 'i-lucide-users',
+        to: accountScopedRoute('corporate_managers'),
+      });
     return items
       .filter(item =>
         isTechnical
           ? item.name === 'Settings'
-          : ['Inbox', 'Conversation', 'Contacts'].includes(item.name)
+          : [
+              'Inbox',
+              'Conversation',
+              'Contacts',
+              'Corporate Managers',
+            ].includes(item.name)
       )
       .map(item => {
         if (item.name === 'Settings')

@@ -7,9 +7,16 @@ class Corporate::DisabledStaffCleanupJob < ApplicationJob
     return if CorporateMembership.exists?(account: account, user_id: user_id, active: true)
 
     CustomerOwnership.where(account: account, owner_id: user_id).find_each do |ownership|
-      Corporate::OwnershipService.new(account: account, actor: account.users.find(actor_id)).transfer(
-        contact: ownership.contact, owner_id: nil, reason: 'employee_disabled'
-      )
+      reactivated = account.with_lock do
+        next true if CorporateMembership.exists?(account: account, user_id: user_id, active: true)
+        next false unless ownership.reload.owner_id == user_id
+
+        Corporate::OwnershipService.new(account: account, actor: account.users.find(actor_id)).transfer(
+          contact: ownership.contact, owner_id: nil, reason: 'employee_disabled'
+        )
+        false
+      end
+      break if reactivated
     end
   end
 end

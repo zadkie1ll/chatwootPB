@@ -27,6 +27,14 @@ export default {
       path: frontendURL('accounts/:accountId'),
       component: AppContainer,
       children: [
+        {
+          path: 'corporate/managers',
+          name: 'corporate_managers',
+          meta: { permissions: ['administrator', 'agent'] },
+          component: () =>
+            import('dashboard/components/corporate/StaffManagement.vue'),
+          props: route => ({ accountId: route.params.accountId }),
+        },
         ...captainRoutes,
         ...inboxRoutes,
         ...conversation.routes,
