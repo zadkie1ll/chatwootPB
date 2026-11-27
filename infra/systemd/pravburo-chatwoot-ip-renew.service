@@ -1,0 +1,11 @@
+# Managed by corporate Chatwoot
+[Unit]
+Description=Renew isolated IP certificate for Chatwoot reserve access
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/pravburo-chatwoot
+ExecStart=/usr/bin/python3 scripts/server/configure-ip-fallback.py --renew
+TimeoutStartSec=300
+UMask=0077

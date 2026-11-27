@@ -187,3 +187,27 @@ class RecipientLookupValidationTests(TestCase):
         self.assertTrue(ResolveRequest(data={'channel': 'telegram', 'username': 'sample_user'}).is_valid())
         self.assertFalse(ResolveRequest(data={'channel': 'max', 'username': 'sample_user'}).is_valid())
         self.assertFalse(ResolveRequest(data={'channel': 'telegram', 'username': 'sample_user', 'phone': '+79991234567'}).is_valid())
+
+
+class PipelineDiagnosticsTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.environment = patch.dict('os.environ', {'INTEGRATION_API_TOKEN': 'a' * 64, 'MAX_DELIVERY_ENABLED': 'true'})
+        self.environment.start()
+        self.addCleanup(self.environment.stop)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + 'a' * 64)
+
+    def test_max_outage_remains_visible_to_the_dashboard(self):
+        import httpx
+        with patch('delivery.views.transport_gateway_health', return_value={'connected': True}), \
+             patch('delivery.transport.channel_gateway', side_effect=httpx.ConnectError('Synthetic MAX outage')):
+            response = self.client.get('/health/details/')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['max']['delivery_enabled'])
+        self.assertFalse(response.json()['max']['connected'])
+
+    def test_incoming_queue_includes_pending_max_media(self):
+        with patch('delivery.views.transport_gateway_health', return_value={'connected': True, 'queues': {'media_pending': 1}}), \
+             patch('delivery.transport.channel_gateway', return_value={'connected': True, 'queues': {'media_pending': 2}}):
+            response = self.client.get('/health/details/')
+        self.assertEqual(response.json()['incoming']['count'], 3)

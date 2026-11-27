@@ -121,7 +121,10 @@ def diagnostics(request):
         try:
             maximum = channel_gateway('max', 'GET', '/health')
         except (httpx.HTTPError, ValueError, OSError):
-            maximum = {'connected': False}
+            maximum = {'connected': False, 'delivery_enabled': True}
+    max_media = maximum.get('queues', {})
+    incoming['count'] += max_media.get('media_pending', 0)
+    incoming['oldest_seconds'] = max(incoming['oldest_seconds'], max_media.get('media_oldest_seconds', 0))
     return Response({'workers': workers, 'incoming': incoming, 'outgoing': describe(outbound), 'telegram': gateway, 'max': maximum})
 
 

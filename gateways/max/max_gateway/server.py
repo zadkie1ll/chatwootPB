@@ -7,6 +7,7 @@ import fcntl
 import hmac
 import logging
 import os
+import time
 from pathlib import Path
 from aiohttp import web
 from .connection import Connection
@@ -15,6 +16,9 @@ from .messaging import Messaging
 from .media import MAX_BYTES
 
 MAINTENANCE = web.AppKey('maintenance', asyncio.Task)
+LAST_PROGRESS = web.AppKey('last_progress', dict)
+MAINTENANCE_TIMEOUT = 90
+PROGRESS_MAX_AGE = 180
 
 
 def create_app(directory=None, manager=None):
@@ -52,11 +56,13 @@ def create_app(directory=None, manager=None):
         return response
 
     app = web.Application(middlewares=[access], client_max_size=29 * 1024 * 1024)
+    app[LAST_PROGRESS] = {'at': time.time()}
 
     async def health(_request):
-        healthy = MAINTENANCE not in app or not app[MAINTENANCE].done()
+        progress_age = max(0, time.time() - app[LAST_PROGRESS]['at'])
+        healthy = (MAINTENANCE not in app or not app[MAINTENANCE].done()) and progress_age < PROGRESS_MAX_AGE
         return web.json_response({'status': 'ok' if healthy else 'degraded', 'connected': manager.connected, 'poc_only': bool(messaging.allowed_peers) or not messaging.enabled,
-                                  'delivery_enabled': messaging.enabled, 'queues': journal.metrics(), 'sync_error': messaging.error}, status=200 if healthy else 503)
+                                  'delivery_enabled': messaging.enabled, 'progress_age_seconds': round(progress_age), 'queues': journal.metrics(), 'sync_error': messaging.error}, status=200 if healthy else 503)
 
     async def status(_request):
         return web.json_response({**manager.snapshot(), 'messages_forwarded': messaging.enabled,
@@ -80,13 +86,19 @@ def create_app(directory=None, manager=None):
     async def maintain():
         count = 0
         while True:
-            await messaging.tick()
+            try:
+                await asyncio.wait_for(manager.retry_restore(), timeout=30)
+                await asyncio.wait_for(messaging.tick(), timeout=MAINTENANCE_TIMEOUT)
+            except asyncio.TimeoutError:
+                messaging.error = 'sync_timeout'
+            app[LAST_PROGRESS]['at'] = time.time()
             if count % 600 == 0:
                 journal.cleanup()
             count += 1
             await asyncio.sleep(1)
 
     async def startup(_app):
+        _app[LAST_PROGRESS]['at'] = time.time()
         await manager.resume()
         _app[MAINTENANCE] = asyncio.create_task(maintain())
 

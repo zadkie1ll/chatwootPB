@@ -1,0 +1,11 @@
+# Managed by corporate Chatwoot
+[Unit]
+Description=Corporate Chatwoot health and bounded recovery
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/pravburo-chatwoot
+ExecStart=/usr/bin/python3 scripts/server/watchdog.py --repair
+TimeoutStartSec=360
+UMask=0077

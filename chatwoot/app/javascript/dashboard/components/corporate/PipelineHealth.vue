@@ -45,9 +45,17 @@ const delayed = computed(
     failed.value ||
     (state.value &&
       (!state.value.telegram?.connected ||
+        (state.value.max?.delivery_enabled &&
+          (!state.value.max.connected ||
+            state.value.max.sync_error ||
+            state.value.max.status === 'degraded')) ||
         !state.value.chatwoot_worker?.healthy ||
         !state.value.workers?.delivery?.healthy ||
         !state.value.workers?.crm?.healthy ||
+        state.value.workers?.delivery?.last_success_age == null ||
+        state.value.workers?.delivery?.last_success_age > 300 ||
+        state.value.workers?.crm?.last_success_age == null ||
+        state.value.workers?.crm?.last_success_age > 300 ||
         state.value.incoming?.oldest_seconds > 300 ||
         state.value.outgoing?.oldest_seconds > 300))
 );

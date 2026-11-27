@@ -12,12 +12,11 @@ class Corporate::CrmInboundLookupJob < ApplicationJob
     conversation = account.conversations.find(conversation_id)
     phone = conversation.contact.phone_number
     return if phone.blank?
-    return if CorporateCrmLink.exists?(account: account, contact_id: conversation.contact_id)
+    return if linked?(account, conversation)
 
     result = Corporate::CrmClient.new.call('resolve', { phone: phone })
-    return unless result.fetch('found')
-
-    link_inbound(account, conversation, result, phone)
+    linked = result.fetch('found') && link_inbound(account, conversation, result, phone)
+    Corporate::InboundIntake.new(account).share(conversation.contact) unless linked
   end
 
   private
@@ -33,17 +32,24 @@ class Corporate::CrmInboundLookupJob < ApplicationJob
       ownership = Corporate::OwnershipService.new(account: account, actor: nil).sync_from_crm(
         contact: conversation.contact, owner_id: mapping.user_id
       )
-      link = CorporateCrmLink.new(account: account, contact: conversation.contact, conversation: conversation,
-                                  actor: mapping.user, external_deal_id: result.fetch('deal_id'),
-                                  entity_type: result.fetch('entity_type', 'deal'), deal_title: result.fetch('title'),
-                                  deal_url: result.fetch('deal_url'), phone: phone, phone_source: Corporate::Channels.for_conversation(conversation))
+      link = CorporateCrmLink.find_or_initialize_by(account: account, contact: conversation.contact)
+      link.assign_attributes(conversation: conversation,
+                             actor: mapping.user, external_deal_id: result.fetch('deal_id'),
+                             entity_type: result.fetch('entity_type', 'deal'), deal_title: result.fetch('title'),
+                             deal_url: result.fetch('deal_url'), phone: phone, phone_source: Corporate::Channels.for_conversation(conversation))
       Corporate::CrmLinkService.queue!(link, ownership: ownership, actor: mapping.user, assign_owner: false)
+      true
     end
+  end
+
+  def linked?(account, conversation)
+    link = CorporateCrmLink.find_by(account: account, contact_id: conversation.contact_id)
+    link && (link.external_deal_id.present? || link.dispatch_unresolved?)
   end
 
   def unassigned?(account, conversation, ownership, result)
     return false if ownership.owner_id.present?
-    return false if CorporateCrmLink.exists?(account: account, contact_id: conversation.contact_id)
+    return false if linked?(account, conversation)
 
     !CorporateCrmLink.exists?(account: account, external_deal_id: result.fetch('deal_id'), entity_type: result.fetch('entity_type', 'deal'))
   end

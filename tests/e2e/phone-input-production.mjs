@@ -1,10 +1,11 @@
 // No recipient lookup or message is sent; create-chat requests are intercepted.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
-import { chromium } from '@playwright/test';
+import { chromium, webkit } from '@playwright/test';
 const base = process.env.SERVER_BASE_URL || 'https://mess.prav-buro.ru:18443';
 const pair = [...fs.readFileSync('secrets/managers-20261125-access.txt','utf8').matchAll(/Логин: (.+)\nПароль: (.+)/g)][0];
-const browser = await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,...(process.env.TEST_SOCKS_PROXY ? {proxy:{server:process.env.TEST_SOCKS_PROXY}} : {})});
+const safari = process.env.TEST_BROWSER === 'webkit';
+const browser = await (safari ? webkit : chromium).launch({headless:true,...(!safari ? {executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'} : {}),...(process.env.TEST_SOCKS_PROXY ? {proxy:{server:process.env.TEST_SOCKS_PROXY}} : {})});
 const page = await browser.newPage({locale:'ru-RU'});
 const errors=[];page.on('pageerror',e=>errors.push(e.name));
 page.on('console',message=>{if(message.type()==='error'&&/^(SyntaxError|TypeError|ReferenceError):/.test(message.text())) errors.push('render');});
@@ -38,6 +39,14 @@ try {
  for (let attempt = 0; readId && attempt < 2; attempt += 1) {
   const read = await page.request.post(base+`/api/v1/accounts/1/conversations/${readId}/update_last_seen`, { headers: auth });
   check('Repeated personal read succeeds', read.status()===200 && (await read.json()).unread_count===0);
+ }
+ if (readId) {
+  const response = await page.request.get(base+`/api/v1/accounts/1/conversations/${readId}/messages`, {headers:auth});
+  check('Test messages available',response.status()===200);
+  const file = (await response.json()).payload.flatMap(message=>message.attachments || []).find(attachment=>attachment.data_url?.includes('/api/v1/corporate_files/'));
+  assert.ok(file,'Approved test conversation contains media');
+  check('Protected media stays on current HTTPS origin',new URL(file.data_url).origin===base);
+  check('Protected media accessible',(await page.request.head(file.data_url)).status()===200);
  }
  check('No JavaScript errors',errors.length===0);
 } finally {

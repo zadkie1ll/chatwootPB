@@ -136,6 +136,40 @@ class ConnectionTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(self.connection.task)
         self.assertEqual(self.connection.state, 'disconnected')
 
+    async def test_finished_connection_is_restored_without_interactive_login(self):
+        self.connection.save_control(enabled=True, authenticated=True)
+        await self.connection.resume()
+        await self.tick()
+        self.connection.client.closed.set()
+        await self.tick()
+        self.assertFalse(self.connection.connected)
+        await self.connection.retry_restore()
+        await self.tick()
+        self.assertTrue(self.connection.connected)
+        self.assertFalse(self.connection.client.allow_auth)
+
+    async def test_restore_failures_are_backed_off_and_revoked_sessions_wait_for_operator(self):
+        self.connection.save_control(enabled=True, authenticated=True)
+        calls = []
+        class BrokenClient(FakeClient):
+            async def start(client):
+                calls.append(client.allow_auth)
+                raise OSError('Synthetic connection failure')
+        self.connection.factory = BrokenClient
+        await self.connection.retry_restore()
+        await self.tick()
+        await self.connection.retry_restore()
+        self.assertEqual(calls, [False])
+        self.connection.next_restore_at = 0
+        self.connection.error = 'login_required'
+        await self.connection.retry_restore()
+        self.assertEqual(calls, [False])
+
+    async def test_disabled_connection_does_not_restore_in_maintenance_loop(self):
+        self.connection.save_control(enabled=False, authenticated=True)
+        await self.connection.retry_restore()
+        self.assertIsNone(self.connection.task)
+
     async def test_sdk_error_details_are_not_exposed(self):
         await self.connection.start()
         await self.tick()
@@ -170,6 +204,14 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn('qr_image', data)
         self.assertEqual((await self.client.get('/auth/status')).status, 401)
         self.assertIsNone(self.connection.task)
+
+    async def test_stalled_sync_is_unhealthy_even_when_http_server_is_alive(self):
+        from max_gateway.server import LAST_PROGRESS
+        import time
+        self.client.server.app[LAST_PROGRESS]['at'] = time.time() - 181
+        response = await self.client.get('/health')
+        self.assertEqual(response.status, 503)
+        self.assertEqual((await response.json())['status'], 'degraded')
 
     async def test_authenticated_status_is_not_cacheable(self):
         response = await self.client.get('/auth/status', headers=self.headers)

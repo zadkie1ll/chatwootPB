@@ -1,0 +1,12 @@
+# Managed by corporate Chatwoot
+[Unit]
+Description=Renew short-lived Chatwoot IP certificate
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=2h
+RandomizedDelaySec=5min
+Unit=pravburo-chatwoot-ip-renew.service
+
+[Install]
+WantedBy=timers.target

@@ -33,11 +33,19 @@ class Corporate::IngestEvent
     identity = identity_for(event)
     message = Corporate::IncomingMessage.new(account: @account, inbox: @inbox).perform(event, identity, attachments)
     if message
-      enqueue_lookup(message) if @lookup_needed && Corporate.crm_enabled?(@account) && Corporate::Channels.crm_enabled?(event[:channel])
+      route_inbound(message, identity, event)
       Corporate::ChannelContact.refresh_crm(@account, message.conversation)
     end
     CorporateInboxReceipt.create!(account: @account, event_key: key, message: message)
     message
+  end
+
+  def route_inbound(message, identity, event)
+    inbound_lookup = Corporate::InboundIntake.new(@account).received(identity, event)
+    return unless @lookup_needed || inbound_lookup
+    return unless Corporate.crm_enabled?(@account) && Corporate::Channels.crm_enabled?(event[:channel])
+
+    enqueue_lookup(message)
   end
 
   def event_key(event)

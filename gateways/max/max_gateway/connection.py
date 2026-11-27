@@ -4,6 +4,7 @@ from contextlib import suppress
 import io
 import json
 import logging
+import time
 from pathlib import Path
 import uuid
 
@@ -66,6 +67,8 @@ class Connection:
         self.lock = asyncio.Lock()
         self.client = None
         self.task = None
+        self.next_restore_at = 0
+        self.restore_failures = 0
 
     def control(self):
         location = self.directory / 'control.json'
@@ -107,6 +110,7 @@ class Connection:
 
     def authenticated(self):
         self.state = 'connected'
+        self.restore_failures = 0
         self.error = None
         self.qr_image = None
         self.save_control(enabled=True, authenticated=True)
@@ -150,6 +154,19 @@ class Connection:
         saved = self.control()
         if saved.get('enabled') and saved.get('authenticated'):
             await self.start(allow_auth=False)
+
+    async def retry_restore(self):
+        if self.task and not self.task.done():
+            return
+        if self.error == 'login_required' or time.time() < self.next_restore_at:
+            return
+        self.next_restore_at = time.time() + 30
+        saved = self.control()
+        if not saved.get('enabled') or not saved.get('authenticated'):
+            return
+        self.restore_failures += 1
+        self.next_restore_at = time.time() + min(300, 5 * 2 ** min(self.restore_failures, 6))
+        await self.start(allow_auth=False)
 
     async def password(self, attempt_id, value):
         if attempt_id != self.attempt_id or self.state != 'password_required':

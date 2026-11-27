@@ -1,0 +1,16 @@
+# Managed by corporate Chatwoot
+[Unit]
+Description=Corporate Chatwoot application startup
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/pravburo-chatwoot
+ExecStart=/bin/bash scripts/compose.sh up -d --no-build --pull never --wait --wait-timeout 240
+TimeoutStartSec=420
+
+[Install]
+WantedBy=multi-user.target
